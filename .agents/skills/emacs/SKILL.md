@@ -1,9 +1,9 @@
 ---
-name: emacsclient-access
+name: emacs
 description: Access and control a running GNU Emacs instance via `emacsclient`. Use when an agent needs to inspect Emacs state, evaluate Elisp, visit files or locations, or trigger editor-side actions inside the user's live Emacs session instead of only editing files on disk. On Windows, run `emacsclient` from PowerShell so the PowerShell function can resolve Emacs correctly. On Linux, run `emacsclient` from the default shell via `PATH`.
 ---
 
-# Emacsclient Access
+# Emacs
 
 Use this skill when work must happen inside the live Emacs session instead of only on-disk files.
 
