@@ -31,3 +31,5 @@ request/curl-cookie-jar
 eln-cache/
 lisp/ci-dashboard/
 /server/server
+/bin
+/lsp-servers
