@@ -1044,8 +1044,9 @@ input means nil arguments."
                          (equal raw-arguments ""))
                (car (read-from-string raw-arguments))))))
     (eglot-server-capable-or-lose :executeCommandProvider)
-    (eglot-execute-command (eglot--current-server-or-lose)
-                           command arguments)))
+    (eglot-execute
+     (eglot-current-server)
+     (list :command command :arguments arguments))))
 
 (use-package gud
   :defines (gdb-many-windows gdb-use-separate-io-buffer)

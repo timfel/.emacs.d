@@ -275,20 +275,6 @@ Return non-nil when the launcher is ready to execute."
    (delq nil
          (mapcar #'timfel/jdb--normalize-path (append paths nil)))))
 
-(defun timfel/jdb--execute-command (command arguments)
-  "Execute JDTLS COMMAND with ARGUMENTS in the current Eglot session."
-  (let ((commands (append (or (eglot-server-capable :executeCommandProvider :commands)
-                              '())
-                          nil)))
-    (unless (member command commands)
-      (user-error "Current Eglot server does not advertise `%s'" command))
-    (eglot-execute
-     (eglot-current-server)
-     `(:command ,command
-       :arguments ,(if (vectorp arguments)
-                       arguments
-                     (vconcat arguments))))))
-
 (defun timfel/jdb--project-paths ()
   "Return classpath and sourcepath data for the current Java project."
   (unless buffer-file-name
@@ -297,23 +283,24 @@ Return non-nil when the launcher is ready to execute."
     (user-error "Current buffer is not managed by Eglot"))
   (let* ((uri (timfel/jdb--file-uri buffer-file-name))
          (classpath-reply
-          (timfel/jdb--execute-command
-           "java.project.getClasspaths"
-           (vector uri "{\"scope\":\"runtime\"}")))
+          (eglot-execute (eglot-current-server)
+                         (list :command
+                               "java.project.getClasspaths"
+                               :arguments
+                               (vector uri "{\"scope\":\"runtime\"}"))))
          (classpath-list
           (timfel/jdb--normalize-path-list
            (append (plist-get classpath-reply :classpaths)
-                   (plist-get classpath-reply :modulepaths))))
+                   (plist-get classpath-reply :modulepaths)
+                   nil)))
          (sourcepath-list
-          (condition-case err
-              (timfel/jdb--normalize-path-list
-               (timfel/jdb--execute-command
-                "java.project.listSourcePaths"
-                (vector uri)))
-            (error
-             (message "Could not fetch JDTLS source paths: %s"
-                      (error-message-string err))
-             nil))))
+          (timfel/jdb--normalize-path-list
+           (mapcar (lambda (pl) (plist-get pl :path))
+                   (thread-first
+                     (eglot-execute (eglot-current-server)
+                                    '(:command "java.project.listSourcePaths"))
+                     (plist-get :data)
+                     (append nil))))))
     (list :classpath-list classpath-list
           :sourcepath-list sourcepath-list
           :classpath (mapconcat #'identity classpath-list path-separator)
@@ -323,6 +310,7 @@ Return non-nil when the launcher is ready to execute."
   "Extract a JDWP attach address from Java process ARGS."
   (when (and (stringp args)
              (or (string-match "-agentlib:jdwp=[^[:space:]]*address=\\([^,[:space:]]+\\)" args)
+                 (string-match "--vm.agentlib:jdwp=[^[:space:]]*address=\\([^,[:space:]]+\\)" args)
                  (string-match "-Xrunjdwp:[^[:space:]]*address=\\([^,[:space:]]+\\)" args)))
     (let ((address (match-string 1 args)))
       (cond
@@ -340,11 +328,7 @@ Return non-nil when the launcher is ready to execute."
              (comm (alist-get 'comm attrs))
              (args (alist-get 'args attrs))
              (address (timfel/jdb--java-debug-address args)))
-        (when (and address
-                   (or (and (stringp comm)
-                            (string-prefix-p "java" comm))
-                       (and (stringp args)
-                            (string-match-p "\\bjava\\b" args))))
+        (when address
           (push (cons (format "%s [%s] %s"
                               address pid
                               (truncate-string-to-width
@@ -373,11 +357,11 @@ Return non-nil when the launcher is ready to execute."
    (delq nil
          (list (or (and (boundp 'gud-jdb-command-name) gud-jdb-command-name)
                    "jdb")
-               (when attach-address
-                 (format "-attach %s" attach-address))
-               (let ((classpath (plist-get paths :classpath)))
-                 (when (> (length classpath) 0)
-                   (concat "-classpath" classpath)))
+               (if attach-address
+                   (format "-attach %s" attach-address)
+                 (let ((classpath (plist-get paths :classpath)))
+                   (when (> (length classpath) 0)
+                     (concat "-classpath" classpath))))
                (let ((sourcepath (plist-get paths :sourcepath)))
                  (when (> (length sourcepath) 0)
                    (concat "-sourcepath" sourcepath)))
