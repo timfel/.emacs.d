@@ -336,6 +336,8 @@
     (setq find-name-arg nil))
   (add-to-list 'grep-find-ignored-files ".venv")
   (add-to-list 'grep-find-ignored-directories "mxbuild")
+  (add-to-list 'grep-find-ignored-directories ".agent-shell")
+  (add-to-list 'grep-find-ignored-directories ".cache")
   (add-to-list 'grep-find-ignored-directories ".venv")
   (add-to-list 'grep-find-ignored-directories "eln-cache")
   (add-to-list 'grep-find-ignored-directories "site-packages"))

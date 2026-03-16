@@ -243,7 +243,7 @@ branch, and none has live agent-shell, ACP, or process activity."
                (branch (timfel/agent-shell--worktree-branch worktree-parent)))
           (cond
            ((and (seq-every-p #'identity registered-entries)
-                 (= (length (delete-dups (copy-sequence branches))) 1)
+                 ;; (= (length (delete-dups (copy-sequence branches))) 1)
                  (seq-every-p #'timfel/agent-shell--worktree-reusable-p
                               expected-worktrees))
             (throw 'allocation
