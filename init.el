@@ -867,6 +867,7 @@
 
 (use-package vterm
   :ensure t
+  :defines (vterm-mode-map vterm--process)
   :commands (vterm)
   :unless (eq system-type 'windows-nt)
   :bind (("<f12>" . (lambda ()
