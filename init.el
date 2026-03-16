@@ -1002,6 +1002,20 @@
   :bind (("C-," . eglot-code-actions)
          ("C-S-t" . xref-find-apropos))
   :config
+  (advice-add
+   'eglot-workspace-folders :filter-return
+   (lambda (folders)
+     (vconcat
+      (mapcar
+       (lambda (folder)
+         (let* ((copy (copy-sequence folder))
+                (name (plist-get copy :name)))
+           (plist-put copy :name
+                      (if (string-empty-p name)
+                          name
+                        (file-name-nondirectory
+                         (directory-file-name name))))))
+       folders))))
   (defun eglot-execute-custom (command &optional arguments)
     "Execute a custom COMMAND supported by the current Eglot server.
 
