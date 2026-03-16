@@ -1071,6 +1071,7 @@ input means nil arguments."
 
 (use-package timfel-eglot-java-extensions
   :after eglot
+  :functions (timfel/eglot-jdtls)
   :config
   (add-to-list 'eglot-server-programs
                (cons '(java-mode java-ts-mode) #'timfel/eglot-jdtls)))
