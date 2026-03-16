@@ -916,6 +916,7 @@
 (use-package eshell
   :if (eq system-type 'windows-nt)
   :after exec-path-from-windows-powershell
+  :defer t
   :bind (("<f12>" . (lambda ()
                       (interactive)
                       (if-let ((w (get-window-with-predicate (lambda (w) (string-prefix-p "*eshell" (buffer-name (window-buffer w)))))))
@@ -927,8 +928,11 @@
                                 (switch-to-buffer buf)
                               (eshell t)
                               (add-hook 'kill-buffer-hook #'delete-window 0 t)))
-                          (set-window-dedicated-p w t)))))
-         :map eshell-mode-map
+                          (set-window-dedicated-p w t)))))))
+
+(use-package esh-mode
+  :defer t
+  :bind (:map eshell-mode-map
          ("C-x <left>" . (lambda () (interactive)
                            (let* ((bl (seq-sort (lambda (a b) (string-lessp (buffer-name a) (buffer-name b))) (buffer-list)))
                                   (before (seq-take-while (lambda (b) (not (eq b (current-buffer)))) bl))
