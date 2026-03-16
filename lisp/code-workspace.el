@@ -20,6 +20,17 @@ CANDIDATES is a list of plists with keys:
   :workspace-file absolute path
   :folders list of absolute directory names (as directories).")
 
+(defvar code-workspace--eglot-buffer-count 0
+  "We refcount active eglot buffers for our projects.
+
+If this reaches 0, we flush code-workspace--vc-root-to-project-cache so
+that e.g. when we want to switch between overlapping code-workspaces, we
+can do so after the last eglot-managed buffer is killed for the previous
+code-workspace.")
+
+(defvar code-workspace--vc-root-to-project-cache (make-hash-table :test #'equal)
+  "Cache from vc-root to single code-workspace project")
+
 (defun code-workspace--vc-root (dir)
   (when-let ((vc-proj (project-try-vc dir)))
     (file-name-as-directory (expand-file-name (project-root vc-proj)))))
@@ -199,15 +210,50 @@ This is a troubleshooting helper for `project-try-code-workspace'."
 
 ;;;###autoload
 (defun project-try-code-workspace (dir)
-  (when-let* ((vc-root (code-workspace--vc-root dir))
-              (cands (code-workspace--cached-candidates vc-root))
-              (target (code-workspace--target-path-for-dir dir))
-              (chosen (code-workspace--choose-best target cands vc-root))
-              (folders (plist-get chosen :folders)))
-    (list 'code-workspace
-          (list :workspace-file (plist-get chosen :workspace-file)
-                :folders folders
-                :root vc-root))))
+  (if-let ((vc-root (code-workspace--vc-root dir)))
+      (if-let* ((cached-project (gethash vc-root code-workspace--vc-root-to-project-cache)))
+          ;; If we have a cached project for this vc-root, return that
+          cached-project
+        (when-let* ((cands (code-workspace--cached-candidates vc-root))
+                    (target (code-workspace--target-path-for-dir dir))
+                    (chosen (code-workspace--choose-best target cands vc-root))
+                    (folders (plist-get chosen :folders)))
+          ;; If we found a good code-workspace file, make a new project
+          (list 'code-workspace
+                (list :workspace-file (plist-get chosen :workspace-file)
+                      :folders folders
+                      :root vc-root))))))
+
+(defun code-workspace--remove-eglot-buffer-hook ()
+  "When the eglot managed buffer count falls to 0, clear the project cache"
+  (setq code-workspace--eglot-buffer-count (max 0 (- code-workspace--eglot-buffer-count 1)))
+  (if (= 0 code-workspace--eglot-buffer-count)
+      (clrhash code-workspace--vc-root-to-project-cache)))
+
+(defun code-workspace--track-eglot-buffer ()
+  (if-let ((project (project-current)))
+      (when (eq 'code-workspace (car project))
+        (if (eglot-managed-p)
+            ;; if eglot starts managing one of our buffers, increment the count and add a kill hook
+            (progn
+              (setq code-workspace--eglot-buffer-count (+ code-workspace--eglot-buffer-count 1))
+              (when (= code-workspace--eglot-buffer-count 1)
+                ;; if we just started tracking the very first one, make sure to
+                ;; fill the cache for this project, so subsequent files that
+                ;; are opened will hit the cache and eglot will manage them in
+                ;; the same project
+                (let ((folders (plist-get (nth 1 project) :folders)))
+                  ;; for all the folders in the code-workspace, we link their vc-roots to this new project,
+                  ;; so in files in the external-roots we still return the same cached project
+                  (dolist (folder folders)
+                    (when-let ((folder-vc-root (code-workspace--vc-root folder)))
+                      (puthash folder-vc-root project code-workspace--vc-root-to-project-cache)))))
+              (add-hook 'kill-buffer-hook #'code-workspace--remove-eglot-buffer-hook 0 t))
+          ;; if eglot stops managing one of our buffers, run and then remove the kill hook
+          (remove-hook 'kill-buffer-hook #'code-workspace--remove-eglot-buffer-hook t)
+          (code-workspace--remove-eglot-buffer-hook)))))
+
+(add-hook 'eglot-managed-mode-hook #'code-workspace--track-eglot-buffer)
 
 (add-hook 'project-find-functions #'project-try-code-workspace)
 
