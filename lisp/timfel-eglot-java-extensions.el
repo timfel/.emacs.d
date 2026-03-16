@@ -235,13 +235,27 @@ Return non-nil when the launcher is ready to execute."
                 timfel/eglot-jdtls-install-buffer-name))
   (let* ((project-root (expand-file-name
                         (project-root project)))
+         (external-roots (project-external-roots project))
          (workspace-dir (expand-file-name ".cache/.jdtls.workspace/"
                                           project-root))
          (cache-dir (expand-file-name "cache/" workspace-dir)))
     (make-directory cache-dir t)
     (list (timfel/eglot-jdtls--launcher)
           "-configuration" workspace-dir
-          "-data" cache-dir)))
+          "-data" cache-dir
+          :initializationOptions
+          `(:settings
+            (:java (:format (:onType (:enabled t)
+                             :comments (:enabled t)
+                             :enabled t)
+                    :completion (:guessMethodArguments t
+                                 :overwrite t
+                                 :enabled t)
+                    :autobuild (:enabled t)
+                    :saveActions (:organizeImports t)
+                    :jdt (:ls (:javac (:enabled t)))
+                    :project (:importOnFirstTimeStartup t)))
+            :workspaceFolders ,(vconcat (mapcar #'timfel/jdb--file-uri (or external-roots (list project-root))))))))
 
 (defun timfel/jdb--file-uri (file-name)
   "Return FILE-NAME as a file URI."
