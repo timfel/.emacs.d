@@ -28,7 +28,7 @@
     (cons 'transient (expand-file-name root))))
 
 ;;;###autoload
-(add-to-list 'project-find-functions #'project-markers-find-root)
+(add-hook 'project-find-functions #'project-markers-find-root)
 
 (provide 'project-markers)
 

@@ -345,10 +345,15 @@
 (use-package project
   :bind (("C-t" . project-or-external-find-file))
   :config
-  (add-to-list 'vc-directory-exclusion-list ".venv"))
+  (add-to-list 'vc-directory-exclusion-list ".venv")
+  (add-to-list 'vc-directory-exclusion-list "mxbuild")
+  (add-to-list 'vc-directory-exclusion-list ".agent-shell")
+  (add-to-list 'vc-directory-exclusion-list ".cache")
+  (add-to-list 'vc-directory-exclusion-list "site-packages")
+  (add-to-list 'vc-directory-exclusion-list "eln-cache"))
 
 (use-package code-workspace
-  :after project)
+  :after (project project-markers))
 
 (use-package project-markers
   :after project)
@@ -1054,7 +1059,8 @@ input means nil arguments."
   :after eglot
   :config
   (add-to-list 'eglot-server-programs
-               '((java-mode java-ts-mode) . timfel/eglot-jdtls)))
+               (cons '(java-mode java-ts-mode) #'timfel/eglot-jdtls)))
+
 
 (use-package yasnippet
   :ensure t
