@@ -991,8 +991,70 @@
          ("C-c e" . flymake-show-project-diagnostics)))
 
 (use-package eglot
+  :functions (eglot--current-server-or-lose
+              eglot-server-capable eglot-server-capable-or-lose
+              eglot-execute-command)
   :bind (("C-," . eglot-code-actions)
-         ("C-S-t" . xref-find-apropos)))
+         ("C-S-t" . xref-find-apropos))
+  :config
+  (defun eglot-execute-custom (command &optional arguments)
+    "Execute a custom COMMAND supported by the current Eglot server.
+
+Interactively, offer commands advertised by the server's
+`:executeCommandProvider'.  With a prefix argument, prompt for
+ARGUMENTS as an Elisp form evaluating to a list or vector.  Empty
+input means nil arguments."
+    (interactive
+     (let* ((commands (append (or (eglot-server-capable
+                                   :executeCommandProvider :commands)
+                                  '())
+                              nil))
+            (command
+             (progn
+               (unless commands
+                 (user-error "Current server advertises no custom commands"))
+               (completing-read "[eglot] Execute command: "
+                                commands nil t nil nil
+                                (car commands))))
+            (raw-arguments
+             (when current-prefix-arg
+               (read-from-minibuffer
+                "[eglot] Arguments (Elisp list/vector, empty for nil): "))))
+       (list command
+             (unless (or (null raw-arguments)
+                         (equal raw-arguments ""))
+               (car (read-from-string raw-arguments))))))
+    (eglot-server-capable-or-lose :executeCommandProvider)
+    (eglot-execute-command (eglot--current-server-or-lose)
+                           command arguments)))
+
+(use-package gud
+  :defines (gdb-many-windows gdb-use-separate-io-buffer)
+  :functions (gud-basic-call)
+  :commands (gdb jdb pdb)
+  :custom (gud-jdb-use-classpath t)
+  :bind (:map gud-mode-map
+         ("C-q" . (lambda () (interactive) (gud-basic-call "quit"))))
+  :hook ((gud-mode . gud-tooltip-mode)
+         (gud-mode . (lambda () (window-configuration-to-register 123456))))
+  :config
+  ;; restore window configuration after gud exits
+  (advice-add 'gud-sentinel :after (lambda (proc _msg)
+                                     (when (memq (process-status proc) '(signal exit))
+                                       (jump-to-register 123456)
+                                       (bury-buffer))))
+  ;; make command window dedicated when gud starts up
+  (advice-add 'gdb-setup-windows :after (lambda ()
+                                          (set-window-dedicated-p (selected-window) t)))
+  ;; use the debug view with many windows
+  (setq gdb-many-windows t
+        gdb-use-separate-io-buffer t))
+
+(use-package timfel-eglot-java-extensions
+  :after eglot
+  :config
+  (add-to-list 'eglot-server-programs
+               '((java-mode java-ts-mode) . timfel/eglot-jdtls)))
 
 (use-package yasnippet
   :ensure t
