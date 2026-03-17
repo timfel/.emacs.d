@@ -11,7 +11,6 @@
 
 (require 'timfel)
 (require 'jira)
-(require 'orcl (expand-file-name "orcl.el" timfel/gist-location))
 
 (declare-function timfel/agent-shell-fan-out-worktrees
                   "timfel-agent-shell-extensions"

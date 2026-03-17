@@ -64,19 +64,23 @@ Use this when the user wants multiple parallel agent shells, especially one per 
 - Fan out several requests at once:
   `emacsclient --eval "(dolist (spec (list (cons \"/path/to/wt-a/\" \"Task A\") (cons \"/path/to/wt-b/\" \"Task B\"))) (pcase-let ((`(,root . ,prompt) spec)) (let ((buf (seq-find (lambda (buf) (with-current-buffer buf (string= (file-name-as-directory default-directory) (file-name-as-directory root)))) (agent-shell-buffers)))) (unless buf (error \"No agent-shell buffer for %s\" root)) (with-current-buffer buf (agent-shell-queue-request prompt)))))"`
 
-## Jira Helpers
+## Jira, Bitbucket, and CI Helpers
 
-Use this when the user wants a quick Jira result directly from their Emacs setup instead of reconstructing JQL plumbing each time.
+Use this when the user wants a quick Jira, Bitbucket, or CI info directly from their Emacs setup instead of reconstructing REST plumbing each time.
 
 - `timfel/jira-periodic-python-issues-alist` returns `((KEY . SUMMARY) ...)` pairs.
-- It queries Jira for issues with label `periodic-job-failures`, component `Python`, status not in `Closed` or `In Progress`, and created within the last 90 days by default.
-- Pass a numeric argument to override the day window.
-- Example: `emacsclient --eval '(timfel/jira-periodic-python-issues-alist)'`
-- Example with a 30-day window: `emacsclient --eval '(timfel/jira-periodic-python-issues-alist 30)'`
+   - It queries Jira for issues with label `periodic-job-failures`, component `Python`, status not in `Closed` or `In Progress`, and created within the last 90 days by default.
+   - Pass a numeric argument to override the day window.
+   - Example: `emacsclient --eval '(timfel/jira-periodic-python-issues-alist)'`
+   - Example with a 30-day window: `emacsclient --eval '(timfel/jira-periodic-python-issues-alist 30)'`
+- The `timfel/jira` command is available to open a Jira issue buffer asynchronously. Once loaded, from that buffer you can query and inspect Jira issues
+   - Run this command, then wait for a short while for the `*Jira Issues*` buffer to be populated
+- The `ci-dashboard` command is available to open a CI buffer asynchronously. Once loaded, it allows navigation to all pull requests and CI statuses that the user has either created or is a reviewer of
+   - Run this command, then wait for a short while for the `*ci-dashboard*` buffer to be populated
 
 ## Notes
 
 - Keep Elisp forms short and explicit.
-- If `emacsclient` cannot find the server, just inform the user that the Emacs server is not running.
+- If `emacsclient` cannot find the server, just inform the user that the Emacs server is not running and stop.
 - Prefer commands that return simple strings, numbers, or small lists.
 - For scripted edits or shell orchestration, prefer a single `-r --eval` form that validates preconditions and raises a clear error when a target buffer is missing.

@@ -22,7 +22,6 @@
 (setq use-package-verbose t)
 
 (add-to-list 'load-path (locate-user-emacs-file "lisp"))
-(add-to-list 'load-path (locate-user-emacs-file "lisp/ci-dashboard"))
 
 (use-package emacs
   :bind (([f11] . toggle-frame-fullscreen)
@@ -102,13 +101,16 @@
 
 (use-package timfel
   :config
-  (let ((oca (expand-file-name "oca.el" timfel/gist-location)))
-    (autoload 'oca-key oca nil t)
-    (autoload 'oca-update-opencode-config oca nil t)
-    (autoload 'oca-update-codex-config oca nil t)
-    (autoload 'oca-codex-login oca nil t))
-  (let ((orcl (expand-file-name "orcl.el" timfel/gist-location)))
-    (autoload 'timfel/git-merges-jira-html orcl nil t)))
+  (add-to-list 'load-path (expand-file-name "lisp" timfel/gist-location)))
+
+(use-package emacs-ci
+  :commands ci-dashboard)
+
+(use-package oca
+  :commands (oca-key oca-update-codex-config oca-update-opencode-config oca-codex-login))
+
+(use-package orcl
+  :commands (timfel/git-merges-jira-html timfel/install-ol-cli))
 
 (use-package timfel-agent-shell-extensions
   :commands (timfel/agent-shell-fan-out-worktrees
@@ -859,9 +861,6 @@
   :if (eq window-system nil)
   :config (run-with-idle-timer 0.1 nil #'xterm-mouse-mode +1))
 
-(use-package emacs-ci
-  :commands ci-dashboard)
-
 (use-package proced
   :ensure t
   :bind (("<f8>". proced)
@@ -996,9 +995,9 @@
          ("C-c e" . flymake-show-project-diagnostics)))
 
 (use-package eglot
-  :functions (eglot--current-server-or-lose
-              eglot-server-capable eglot-server-capable-or-lose
-              eglot-execute-command)
+  :functions (eglot-server-capable eglot-server-capable-or-lose
+              eglot-execute
+              eglot-current-server)
   :bind (("C-," . eglot-code-actions)
          ("C-S-t" . xref-find-apropos))
   :config
