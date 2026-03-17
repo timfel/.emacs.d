@@ -385,6 +385,9 @@
   :bind (("M-?" . company-complete))
   :config (global-company-mode t)
   :custom
+  (company-dabbrev-code-everywhere t)
+  (company-dabbrev-other-buffers 'all)
+  (company-dabbrev-ignore-case 'keep-prefix)
   (company-dabbrev-downcase 0)
   (company-idle-delay (if (eq system-type 'windows-nt) 10 0.2)))
 
