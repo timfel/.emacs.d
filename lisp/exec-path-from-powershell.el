@@ -152,7 +152,7 @@ ENV-TABLE-VAR names the PowerShell dictionary variable to update."
         exec-path-from-powershell-visual-studio-host-arch))
 
 (defun exec-path-from-powershell--visual-studio-variable-names ()
-  "Return the Visual Studio environment variable names that differ from the base shell."
+  "Return the Visual Studio env variable names that differ from the base shell."
   (let* ((cache-key (exec-path-from-powershell--visual-studio-variable-cache-key))
          (cached (gethash cache-key exec-path-from-powershell--visual-studio-variable-cache)))
     (or cached
@@ -315,7 +315,7 @@ When INCLUDE-VS is non-nil, merge the Visual Studio developer environment."
   "Return the PowerShell evaluation of STR formatted with ARGS.
 STR follows the same conventions as `exec-path-from-shell-printf'."
   (if (not (member (file-name-nondirectory exec-path-from-shell-shell-name) '("pwsh.exe" "powershell.exe")))
-      (funcall oldfunc names)
+      (funcall oldfunc str args)
     (let* ((decoded (exec-path-from-powershell--decode-escapes str))
            (values (exec-path-from-powershell--evaluate-expressions args))
            (idx 0)

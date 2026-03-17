@@ -24,6 +24,11 @@
         ("cselpa" . 0)))
 (package-initialize)
 
+;; These are Oracle libraries that are not available everywhere
+(provide 'emacs-ci)
+(provide 'oca)
+(provide 'orcl)
+
 ;; Add local lisp directories.
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
