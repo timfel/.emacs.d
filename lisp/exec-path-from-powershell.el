@@ -89,7 +89,8 @@ The limit is given by `exec-path-from-shell-warn-duration-millis'."
   (let* ((exe exec-path-from-shell-shell-name)
          (coding-system-for-read 'utf-8)
          (coding-system-for-write 'utf-8)
-         (temp-ps1 (make-temp-file "exec-path-from-powershell-" nil ".ps1" ps-script))
+         (temp-ps1 (let ((inhibit-message t))
+                     (make-temp-file "exec-path-from-powershell-" nil ".ps1" ps-script)))
          (args (append
                 (list "-ExecutionPolicy" "Bypass" "-NonInteractive")
                 (unless exec-path-from-powershell-load-profile
