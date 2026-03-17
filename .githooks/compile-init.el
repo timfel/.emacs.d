@@ -26,7 +26,6 @@
 
 ;; Add local lisp directories.
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
-(add-to-list 'load-path (expand-file-name "lisp/ci-dashboard" user-emacs-directory))
 
 (provide 'compile-init)
 ;;; compile-init.el ends here
