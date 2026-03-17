@@ -722,6 +722,17 @@
   :ensure t
   :defer 3
   :unless (eq system-type 'windows-nt)
+  :custom
+  (exec-path-from-shell-variables
+   '("PATH"
+     "MANPATH"
+     "JAVA_HOME"
+     "MX_PYTHON_VERSION"
+     "MX_BUILD_SHALLOW_DEPENDENCY_CHECKS"
+     "MX_OUTPUT_ROOT_INCLUDES_CONFIG"
+     "MX_BUILD_EXPLODED"
+     "MX_COMPDB"
+     "LINKY_LAYOUT"))
   :config
   (exec-path-from-shell-initialize))
 
