@@ -138,7 +138,7 @@ Non-interactive arguments are Begin End Regexp"
   (move-line (if (null n) 1 n)))
 
 (defun timfel/update-proxies-from-wpad (&optional force-enable)
-  (interactive "p")
+  (interactive "P")
   (let* (wpad
          (no-proxy-env "localhost,127.0.0.1,*.oraclecorp.com,oraclecorp.com,*.oraclecloud.com,oraclecloud.com,*.us.oracle.com")
          (no-proxy
