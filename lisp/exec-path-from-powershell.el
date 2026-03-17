@@ -310,42 +310,44 @@ When INCLUDE-VS is non-nil, merge the Visual Studio developer environment."
           (buffer-string))
       (kill-buffer result))))
 
-(defun exec-path-from-powershell-printf (str &optional args)
+(defun exec-path-from-powershell--printf (oldfunc str &optional args)
   "Return the PowerShell evaluation of STR formatted with ARGS.
 STR follows the same conventions as `exec-path-from-shell-printf'."
-  (let* ((decoded (exec-path-from-powershell--decode-escapes str))
-         (values (exec-path-from-powershell--evaluate-expressions args))
-         (idx 0)
-         (len (length decoded))
-         (pieces (get-buffer-create " *exec-path-from-powershell-printf*")))
-    (unwind-protect
-        (with-current-buffer pieces
-          (erase-buffer)
-          (while (< idx len)
-            (let ((ch (aref decoded idx)))
-              (setq idx (1+ idx))
-              (if (/= ch ?%)
-                  (insert-char ch 1)
-                (progn
-                  (when (>= idx len)
-                    (error "Incomplete format specifier in %S" str))
-                  (let ((next (aref decoded idx)))
-                    (setq idx (1+ idx))
-                    (pcase next
-                      (?% (insert-char ?% 1))
-                      (?s
-                       (if (null values)
-                           (error "Not enough arguments for format string")
-                         (insert (or (pop values) ""))))
-                      (_
-                       (error "Unsupported format specifier %%%c" next))))))))
-          (when values
-            (dolist (extra values)
-              (insert (or extra ""))))
-          (buffer-string))
-      (kill-buffer pieces))))
+  (if (not (member (file-name-nondirectory exec-path-from-shell-shell-name) '("pwsh.exe" "powershell.exe")))
+      (funcall oldfunc names)
+    (let* ((decoded (exec-path-from-powershell--decode-escapes str))
+           (values (exec-path-from-powershell--evaluate-expressions args))
+           (idx 0)
+           (len (length decoded))
+           (pieces (get-buffer-create " *exec-path-from-powershell-printf*")))
+      (unwind-protect
+          (with-current-buffer pieces
+            (erase-buffer)
+            (while (< idx len)
+              (let ((ch (aref decoded idx)))
+                (setq idx (1+ idx))
+                (if (/= ch ?%)
+                    (insert-char ch 1)
+                  (progn
+                    (when (>= idx len)
+                      (error "Incomplete format specifier in %S" str))
+                    (let ((next (aref decoded idx)))
+                      (setq idx (1+ idx))
+                      (pcase next
+                        (?% (insert-char ?% 1))
+                        (?s
+                         (if (null values)
+                             (error "Not enough arguments for format string")
+                           (insert (or (pop values) ""))))
+                        (_
+                         (error "Unsupported format specifier %%%c" next))))))))
+            (when values
+              (dolist (extra values)
+                (insert (or extra ""))))
+            (buffer-string))
+        (kill-buffer pieces)))))
 
-(defun exec-path-from-powershell-getenvs (oldfunc names)
+(defun exec-path-from-powershell--getenvs (oldfunc names)
   "Get the environment variables with NAMES from PowerShell.
 
 If exec-path-from-shell-shell-name is not powershell.exe or pwsh.exe,
@@ -368,7 +370,11 @@ The result is a list of (NAME . VALUE) pairs."
 
 (advice-add #'exec-path-from-shell-getenvs
             :around
-            #'exec-path-from-powershell-getenvs)
+            #'exec-path-from-powershell--getenvs)
+
+(advice-add #'exec-path-from-shell-printf
+            :around
+            #'exec-path-from-powershell--printf)
 
 (provide 'exec-path-from-powershell)
 
