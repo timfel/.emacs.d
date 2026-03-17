@@ -354,7 +354,7 @@
   (add-to-list 'vc-directory-exclusion-list "site-packages")
   (add-to-list 'vc-directory-exclusion-list "eln-cache"))
 
-(use-package code-workspace
+(use-package vscode-project
   :after (project project-markers))
 
 (use-package project-markers
