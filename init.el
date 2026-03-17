@@ -104,12 +104,15 @@
   (add-to-list 'load-path (expand-file-name "lisp" timfel/gist-location)))
 
 (use-package emacs-ci
+  :after timfel
   :commands ci-dashboard)
 
 (use-package oca
+  :after timfel
   :commands (oca-key oca-update-codex-config oca-update-opencode-config oca-codex-login))
 
 (use-package orcl
+  :after timfel
   :commands (timfel/git-merges-jira-html timfel/install-ol-cli))
 
 (use-package timfel-agent-shell-extensions
