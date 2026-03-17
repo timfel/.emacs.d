@@ -9,13 +9,13 @@
 (require 'tabulated-list)
 (require 'tablist)
 
-(require 'timfel)
 (require 'jira)
 
 (declare-function timfel/agent-shell-fan-out-worktrees
                   "timfel-agent-shell-extensions"
                   (task-specs &optional directory))
 (declare-function jira-utils-marked-items "jira-utils")
+(declare-function timfel/determine-recent-project-root "timfel")
 
 (defvar jira-issues-key-summary-map)
 
@@ -102,7 +102,7 @@ The return value is a list of `(KEY . SUMMARY)' pairs for issues with label
 
 (defun timfel/jira--read-project-root ()
   "Prompt for the project root to use for agent worktree creation."
-  (let* ((recent-root (timfel/determine-recent-project-root))
+  (let* ((recent-root (and (fboundp #'timfel/determine-recent-project-root) (timfel/determine-recent-project-root)))
          (initial-directory (or recent-root default-directory)))
     (expand-file-name
      (read-directory-name "Project root for agent worktrees: "
