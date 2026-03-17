@@ -100,6 +100,7 @@ The limit is given by `exec-path-from-shell-warn-duration-millis'."
     (unwind-protect
         (with-temp-buffer
           (exec-path-from-powershell--debug "Invoking %s with args %S" exe args)
+          (exec-path-from-powershell--debug "Powershell script contents:\n%s" ps-script)
           (let ((exit (exec-path-from-powershell--warn-duration
                       (apply #'call-process exe nil t nil args))))
             (unless (eq exit 0)
@@ -111,12 +112,11 @@ The limit is given by `exec-path-from-shell-warn-duration-millis'."
   (make-hash-table :test #'equal)
   "Cache of discovered Visual Studio environment variable names.")
 
-(defun exec-path-from-powershell--build-vs-block (&optional env-table-var)
+(defun exec-path-from-powershell--build-vs-block (env-table-var)
   "Return a PowerShell snippet that merges a Visual Studio environment.
 ENV-TABLE-VAR names the PowerShell dictionary variable to update."
   (let ((arch (exec-path-from-powershell--ps-quote exec-path-from-powershell-visual-studio-arch))
-        (host (exec-path-from-powershell--ps-quote exec-path-from-powershell-visual-studio-host-arch))
-        (env-table-var (or env-table-var "$envTable")))
+        (host (exec-path-from-powershell--ps-quote exec-path-from-powershell-visual-studio-host-arch)))
     (concat
      "$vsOutput = @();"
      "try {"
@@ -170,14 +170,14 @@ ENV-TABLE-VAR names the PowerShell dictionary variable to update."
                  "$baseEnv.Keys | ForEach-Object { [void]$allNames.Add($_) };"
                  "$vsEnv.Keys | ForEach-Object { [void]$allNames.Add($_) };"
                  "$result = foreach ($name in $allNames) {"
-                 "  $baseValue = if ($baseEnv.ContainsKey($name)) { $baseEnv[$name] } else { $null };"
-                 "  $vsValue = if ($vsEnv.ContainsKey($name)) { $vsEnv[$name] } else { $null };"
+                 "  $baseValue = $baseEnv[$name];"
+                 "  $vsValue = $vsEnv[$name];"
                  "  if ($baseValue -ne $vsValue) { $name }"
                  "};"
                  "$result | Sort-Object | ConvertTo-Json -Compress;"))
                (raw (exec-path-from-powershell--call-powershell script))
                (json-array-type 'list)
-               (names (json-read-from-string raw)))
+               (names (json-read-from-string (substring raw (or (string-match "\\[\\s-*\"" raw) 0)))))
           (puthash cache-key names exec-path-from-powershell--visual-studio-variable-cache)
           names))))
 
@@ -194,23 +194,35 @@ ENV-TABLE-VAR names the PowerShell dictionary variable to update."
   "Build a PowerShell script that returns JSON for NAMES.
 When INCLUDE-VS is non-nil, merge the Visual Studio developer environment."
   (let* ((names-array (concat "@(" (mapconcat #'exec-path-from-powershell--ps-quote names ", ") ")"))
-         (vs-block (and include-vs (eq system-type 'windows-nt)
-                        (exec-path-from-powershell--build-vs-block))))
+         (vs-block (and include-vs (exec-path-from-powershell--build-vs-block "$envTable"))))
     (concat
      "$ErrorActionPreference='Stop';"
      "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
      "$names=" names-array ";"
      "$envTable = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([System.StringComparer]::OrdinalIgnoreCase);"
      "[System.Environment]::GetEnvironmentVariables().GetEnumerator() | ForEach-Object { $envTable[$_.Key] = [string]$_.Value };"
-     (or vs-block "")
      "$result = @{};"
      "foreach ($name in $names) {"
-     "  if ($envTable.ContainsKey($name)) {"
-     "    $result[$name] = $envTable[$name]"
-     "  } else {"
-     "    $result[$name] = $null"
-     "  }"
+     "  $result[$name] = $envTable[$name]"
      "};"
+     (if vs-block
+         (concat
+          vs-block
+          ;; if $result already contains $name, either the new or the old value
+          ;; is a list of paths separated by ';', and the new and old value are
+          ;; not identical, then prepend the new value to the old value. this
+          ;; mimics visual studio updating path variables in the environment on
+          ;; top of the user's powershell environment
+          "foreach ($name in $names) {"
+          "  $newValue = $envTable[$name];"
+          "  $oldValue = $result[$name];"
+          "  if (($null -ne $oldValue) -and ($null -ne $newValue) -and ($oldValue -ne $newValue) -and (($oldValue -match '.;.') -or ($newValue -match '.;.'))) {"
+          "    $result[$name] = ($newValue + ';' + $oldValue)"
+          "  } else {"
+          "    $result[$name] = $newValue"
+          "  }"
+          "};")
+       "")
      "$result | ConvertTo-Json -Compress;")))
 
 (defun exec-path-from-powershell--evaluate-expressions (expressions)
@@ -238,7 +250,7 @@ When INCLUDE-VS is non-nil, merge the Visual Studio developer environment."
       (let ((json-null :null)
             (json-array-type 'list))
         (mapcar (lambda (value) (unless (eq value :null) value))
-                (json-read-from-string raw))))))
+                (json-read-from-string (substring raw (or (string-match "\\[\\s-*\"" raw) 0))))))))
 
 (defun exec-path-from-powershell--decode-escapes (template)
   "Decode printf-style escapes in TEMPLATE."
@@ -342,7 +354,7 @@ If exec-path-from-shell-shell-name is not powershell.exe or pwsh.exe,
 just delegate to exec-path-from-shell-getenvs.
 
 The result is a list of (NAME . VALUE) pairs."
-  (if (not (member exec-path-from-shell-shell-name '("pwsh.exe" "powershell.exe")))
+  (if (not (member (file-name-nondirectory exec-path-from-shell-shell-name) '("pwsh.exe" "powershell.exe")))
       (funcall oldfunc names)
     (when (file-remote-p default-directory)
       (error "You cannot run exec-path-from-powershell from a remote buffer (Tramp, etc.)"))
@@ -352,12 +364,9 @@ The result is a list of (NAME . VALUE) pairs."
                     exec-path-from-powershell-includes-visual-studio-environment))
            (raw (exec-path-from-powershell--call-powershell script))
            (json-object-type 'alist)
-           (json-null :null)
-           (data (json-read-from-string raw))
-           result)
-      (dolist (name names (nreverse result))
-        (let ((value (cdr (assoc name data))))
-          (push (cons name (unless (eq value :null) value)) result))))))
+           (json-key-type 'string)
+           (json-null nil))
+      (json-read-from-string (substring raw (or (string-match "{\\s-*\"" raw) 0))))))
 
 (advice-add #'exec-path-from-shell-getenvs
             :around

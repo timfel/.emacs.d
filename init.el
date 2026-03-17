@@ -724,12 +724,32 @@
 (use-package exec-path-from-shell
   :ensure t
   :defer 3
-  :unless (eq system-type 'windows-nt)
   :custom
+  (exec-path-from-shell-shell-name
+   (if (eq system-type 'windows-nt) "powershell.exe" nil))
   (exec-path-from-shell-variables
    '("PATH"
      "MANPATH"
      "JAVA_HOME"
+     "JDT"
+     "SDKMAN_DIR"
+     "PIP_CACHE_DIR"
+     "MAVEN_OPTS"
+     "GRADLE_USER_HOME"
+     "UV_INSTALL_DIR"
+     "UV_CACHE_DIR"
+     "UV_PYTHON_CACHE_DIR"
+     "UV_PYTHON_INSTALL_DIR"
+     "UV_TOOL_DIR"
+     "UV_PYTHON_BIN_DIR"
+     "UV_TOOL_BIN_DIR"
+     "PYENV"
+     "PYENV_HOME"
+     "PYENV_ROOT"
+     "PYENV_VERSION"
+     "PYTHONIOENCODING"
+     "MX_CACHE_DIR"
+     "MX_ASYNC_DISTRIBUTIONS"
      "MX_PYTHON_VERSION"
      "MX_BUILD_SHALLOW_DEPENDENCY_CHECKS"
      "MX_OUTPUT_ROOT_INCLUDES_CONFIG"
@@ -737,20 +757,8 @@
      "MX_COMPDB"
      "LINKY_LAYOUT"))
   :config
-  (exec-path-from-shell-initialize))
-
-(use-package exec-path-from-windows-powershell
-  :defer 3
-  :functions (exec-path-from-windows-powershell-initialize)
-  :if (eq system-type 'windows-nt)
-  :config
-  (exec-path-from-windows-powershell-initialize))
-
-(use-package exec-path-from-shell
-  :ensure t
-  :defer 3
-  :unless (eq system-type 'windows-nt)
-  :config
+  (if (eq system-type 'windows-nt)
+      (require 'exec-path-from-powershell))
   (exec-path-from-shell-initialize))
 
 (use-package rustic
@@ -953,7 +961,7 @@
 
 (use-package eshell
   :if (eq system-type 'windows-nt)
-  :after exec-path-from-windows-powershell
+  :after exec-path-from-shell
   :defer t
   :bind (("<f12>" . (lambda ()
                       (interactive)
