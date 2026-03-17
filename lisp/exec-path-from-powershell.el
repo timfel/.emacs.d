@@ -1,7 +1,5 @@
 ;;; exec-path-from-powershell.el --- Get env vars from PowerShell -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2026 Codex
-
 ;; Author: Tim Felgentreff <timfelgentreff@gmail.com>
 ;; Keywords: windows, environment
 ;; Package-Version: 1.0
