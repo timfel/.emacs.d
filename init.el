@@ -120,8 +120,10 @@
 
 (use-package timfel-agent-shell-extensions
   :commands (timfel/agent-shell-fan-out-worktrees
+             timfel/agent-shell-recover-live-set
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-tile-buffers-grid)
+  :hook (agent-shell-mode . timfel/agent-shell-recover-live-set)
   :bind ("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
   :after (timfel agent-shell))
 
