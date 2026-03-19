@@ -575,6 +575,10 @@
   (add-to-list 'desktop-modes-not-to-save 'treemacs-mode)
   (add-to-list 'desktop-modes-not-to-save 'deadgrep-mode))
 
+(use-package savehist
+  :config
+  (savehist-mode 1))
+
 (use-package treemacs
   :ensure t
   :defer t
