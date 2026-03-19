@@ -1,0 +1,160 @@
+;;; timfel-ci-extensions.el --- CI dashboard helpers -*- lexical-binding: t -*-
+
+;;; Commentary:
+
+;; Local helpers around `emacs-ci' for launching agent-shell reviews from
+;; `*ci-dashboard*'.
+
+;;; Code:
+
+(require 'eieio)
+(require 'subr-x)
+(require 'timfel)
+
+(declare-function ci--section-find-type "emacs-ci" (typ section))
+(declare-function magit-current-section "magit-section")
+(declare-function timfel/agent-shell-fan-out-worktrees
+                  "timfel-agent-shell-extensions"
+                  (task-specs &optional directory))
+
+(defvar ci-dashboard-base-url)
+(defvar ci-dashboard-mode-map)
+
+(defconst timfel/ci-dashboard--jira-key-regexp
+  "\\b[A-Z][A-Z0-9]+-[0-9]+\\b"
+  "Regexp matching a Jira-style issue key inside a pull request title.")
+
+(defun timfel/ci-dashboard--read-project-root ()
+  "Prompt for the project root to use for agent worktree creation."
+  (let* ((recent-root (timfel/determine-recent-project-root))
+         (initial-directory (or recent-root default-directory)))
+    (expand-file-name
+     (read-directory-name "Git directory for agent worktrees: "
+                          initial-directory nil t))))
+
+(defun timfel/ci-dashboard--section-heading (section)
+  "Return the visible heading text for SECTION."
+  (let ((start (slot-value section 'start))
+        (content (slot-value section 'content))
+        (end (slot-value section 'end)))
+    (string-trim
+     (buffer-substring-no-properties
+      start
+      (1- (or content end))))))
+
+(defun timfel/ci-dashboard--normalize-pr-title (title)
+  "Normalize dashboard heading TITLE into a pull request title."
+  (let ((title (string-trim title)))
+    (setq title (string-remove-prefix ">" title))
+    (setq title (replace-regexp-in-string " ([0-9]+/[0-9]+/[0-9]+)\\'" "" title))
+    (string-trim title)))
+
+(defun timfel/ci-dashboard--pr-title (pr &optional section)
+  "Return the pull request title from PR or SECTION."
+  (let* ((pull-request (alist-get 'pullRequest pr))
+         (title (alist-get 'title pull-request)))
+    (or title
+        (when section
+          (timfel/ci-dashboard--normalize-pr-title
+           (timfel/ci-dashboard--section-heading section)))
+        (user-error "Pull request at point is missing a title"))))
+
+(defun timfel/ci-dashboard--task-title (pr-title)
+  "Return a compact task title derived from PR-TITLE."
+  (or (when (string-match timfel/ci-dashboard--jira-key-regexp pr-title)
+        (match-string 0 pr-title))
+      (let ((title (string-trim (replace-regexp-in-string "\\s-+" " " pr-title))))
+        (if (> (length title) 48)
+            (concat (substring title 0 48) "...")
+          title))))
+
+(defun timfel/ci-dashboard--pr-url (pr)
+  "Return the browser URL for pull request PR."
+  (let* ((merge-job (alist-get 'mergeJob pr))
+         (pull-request (or (alist-get 'pullRequest pr)
+                           (alist-get 'pullRequest merge-job)))
+         (to-ref (alist-get 'toRef pull-request))
+         (to-repo (alist-get 'repository to-ref))
+         (to-slug (alist-get 'slug to-repo))
+         (pr-id (alist-get 'id pull-request)))
+    (unless (and to-slug pr-id)
+      (user-error "Could not determine pull request URL at point"))
+    (format "%s/projects/G/repos/%s/pull-requests/%s"
+            ci-dashboard-base-url to-slug pr-id)))
+
+(defun timfel/ci-dashboard--pr-section (section)
+  "Return the enclosing PR section for SECTION, or nil."
+  (ci--section-find-type 'ci-pr-entry section))
+
+(defun timfel/ci-dashboard--pr-task (pr &optional section)
+  "Return a `(TITLE . PROMPT)' pair for reviewing pull request PR."
+  (let* ((pr-title (timfel/ci-dashboard--pr-title pr section))
+         (pr-url (timfel/ci-dashboard--pr-url pr)))
+    (cons
+     (timfel/ci-dashboard--task-title pr-title)
+     (format
+      (concat
+       "Review the CI gates on this pull request.\n\n"
+       "PR title: %s\n"
+       "PR URL: %s\n\n"
+       "Inspect the current gate state for this PR, identify anything failing "
+       "or blocking, summarize what matters, and propose next actions.")
+      pr-title pr-url))))
+
+(defun timfel/ci-dashboard--job-task (pr job &optional pr-section)
+  "Return a `(TITLE . PROMPT)' pair for reviewing JOB from pull request PR."
+  (let* ((pr-title (timfel/ci-dashboard--pr-title pr pr-section))
+         (pr-url (timfel/ci-dashboard--pr-url pr))
+         (job-key (or (alist-get 'key job)
+                      (user-error "Job at point is missing a key")))
+         (job-url (or (alist-get 'url job)
+                      (user-error "Job at point is missing a URL"))))
+    (cons
+     (format "%s %s"
+             (timfel/ci-dashboard--task-title pr-title)
+             job-key)
+     (format
+      (concat
+       "Review this CI job on the pull request under point.\n\n"
+       "PR title: %s\n"
+       "PR URL: %s\n"
+       "Job key: %s\n"
+       "Job URL: %s\n\n"
+       "Focus on this job first. Explain its current state, investigate why "
+       "it is failing or noteworthy, and propose the next actions.")
+      pr-title pr-url job-key job-url))))
+
+(defun timfel/ci-dashboard--task-at-point ()
+  "Return the `(TITLE . PROMPT)' pair for the CI dashboard thing at point.
+
+Return nil when point is neither on a pull request nor on a job."
+  (let* ((section (magit-current-section))
+         (type (and section (oref section type)))
+         (value (and section (oref section value))))
+    (pcase type
+      ('ci-pr-entry
+       (timfel/ci-dashboard--pr-task value section))
+      ('ci-dashboard-job
+       (when-let ((pr-section (timfel/ci-dashboard--pr-section section)))
+         (timfel/ci-dashboard--job-task (oref pr-section value) value pr-section)))
+      (_ nil))))
+
+;;;###autoload
+(defun timfel/ci-dashboard-investigate-with-agent ()
+  "Fan out an agent-shell worktree review for the PR or job at point."
+  (interactive)
+  (if-let ((task (timfel/ci-dashboard--task-at-point)))
+      (let ((project-root (timfel/ci-dashboard--read-project-root)))
+        (unless (require 'timfel-agent-shell-extensions nil t)
+          (user-error "timfel-agent-shell-extensions is not available"))
+        (timfel/agent-shell-fan-out-worktrees (list task) project-root))
+    (message "Point must be on a pull request or job")))
+
+(with-eval-after-load 'emacs-ci
+  (keymap-set ci-dashboard-mode-map
+              "C-x a i"
+              #'timfel/ci-dashboard-investigate-with-agent))
+
+(provide 'timfel-ci-extensions)
+
+;;; timfel-ci-extensions.el ends here
