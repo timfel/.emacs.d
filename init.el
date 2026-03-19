@@ -383,8 +383,16 @@
 
   (defun project-markers-find-root (path)
     "Search up the PATH for `project-markers-filenames'."
-    (when-let ((root (locate-dominating-file path #'project-markers--project-root-p)))
-      (cons 'transient (expand-file-name root))))
+    (when-let* ((root (locate-dominating-file path #'project-markers--project-root-p))
+                (root (file-name-as-directory (expand-file-name root))))
+      (if-let* ((vc-project (project-try-vc path))
+                (vc-root (file-name-as-directory
+                          (expand-file-name (project-root vc-project)))))
+          ;; Never let marker-based detection override a deeper VC root.
+          (unless (and (string-prefix-p root vc-root)
+                       (not (string= root vc-root)))
+            (cons 'transient root))
+        (cons 'transient root))))
   :config
   (add-hook 'project-find-functions #'project-markers-find-root)
   (add-to-list 'vc-directory-exclusion-list ".venv")
