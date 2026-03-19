@@ -112,9 +112,7 @@
 
 (use-package oca
   :after timfel
-  :commands (oca-key oca-update-codex-config oca-update-opencode-config oca-codex-login)
-  :config
-  (require 'timfel-oca-extensions))
+  :commands (oca-key oca-update-codex-config oca-update-opencode-config oca-codex-login))
 
 (use-package orcl
   :after timfel
