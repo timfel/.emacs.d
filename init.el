@@ -112,7 +112,9 @@
 
 (use-package oca
   :after timfel
-  :commands (oca-key oca-update-codex-config oca-update-opencode-config oca-codex-login))
+  :commands (oca-key oca-update-codex-config oca-update-opencode-config oca-codex-login)
+  :config
+  (require 'timfel-oca-extensions))
 
 (use-package orcl
   :after timfel
@@ -1443,7 +1445,8 @@ input means nil arguments."
   :functions (agent-shell-make-environment-variables
               agent-shell-openai-make-authentication
               agent-shell-opencode-make-authentication
-              oca-key)
+              oca-key
+              oca-codex-login)
   :commands agent-shell
   :pin melpa
   :custom
@@ -1538,7 +1541,7 @@ input means nil arguments."
 
   (setq
    agent-shell-openai-codex-environment (agent-shell-make-environment-variables :inherit-env t)
-   agent-shell-openai-authentication (agent-shell-openai-make-authentication :codex-api-key "")
+   agent-shell-openai-authentication (agent-shell-openai-make-authentication :codex-api-key #'oca-codex-login)
    agent-shell-opencode-authentication (agent-shell-opencode-make-authentication :api-key #'oca-key)))
 
 (use-package agent-shell-attention
