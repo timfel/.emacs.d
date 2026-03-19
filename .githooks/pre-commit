@@ -2,6 +2,7 @@
 set -eu
 
 # Byte-compile init and local lisp before allowing commit.
+# init.el is checked strictly, but its .elc is discarded after compilation.
 # This does NOT stage or commit any .elc files.
 
 # Emacs binary resolution order:
@@ -23,6 +24,7 @@ fi
 EMACSDIR=$(git rev-parse --show-toplevel)
 LISPDIR="$EMACSDIR/lisp"
 COMPILE_INIT="$EMACSDIR/.githooks/compile-init.el"
+HOOK_COMPILE="$EMACSDIR/.githooks/hook-compile.el"
 
 FILES=""
 [ -f "$EMACSDIR/init.el" ] && FILES="$FILES $EMACSDIR/init.el"
@@ -43,7 +45,8 @@ fi
 
 "$EMACS_BIN" -Q --batch \
   -l "$COMPILE_INIT" \
+  -l "$HOOK_COMPILE" \
   --eval "(setq byte-compile-warnings t
                 byte-compile-error-on-warn t)" \
-  -f batch-byte-compile \
+  -f hook-compile-strict-batch \
   $FILES

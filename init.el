@@ -1452,13 +1452,12 @@ input means nil arguments."
   :custom
   (agent-shell-header-style 'text)
   (agent-shell-buffer-name-format (lambda (_agent-name project-name) (format "%s agent" project-name)))
-  (agent-shell-session-strategy 'new)
+  (agent-shell-session-strategy 'prompt)
   (agent-shell-highlight-blocks nil)
   (agent-shell-prefer-viewport-interaction nil)
   (agent-shell-preferred-agent-config 'codex)
   (agent-shell-show-config-icons nil)
   (agent-shell-show-usage-at-turn-end t)
-  (agent-shell-session-strategy 'prompt)
   (agent-shell-text-file-capabilities nil)
   (agent-shell-command-prefix
    (lambda (buffer)
@@ -1466,9 +1465,9 @@ input means nil arguments."
          (let* ((tmpdir (format "/tmp/bcodex-session/%s" (format-time-string "%Y-%m-%d-%H-%M-%S")))
                 ;; I cwd is a git worktree, we need to find out and also bind the main checkout location
                 (gitdir (ignore-errors
-                          (string-trim (shell-command-to-string (format "cd %s && git rev-parse --git-common-dir" (shell-quote-argument p))))))
+                          (string-trim (shell-command-to-string "git rev-parse --git-common-dir"))))
                 (common-root (if (and gitdir (not (string-empty-p gitdir)))
-                                 (file-name-directory (directory-file-name (expand-file-name gitdir p)))
+                                 (file-name-directory (directory-file-name (expand-file-name gitdir)))
                                default-directory))
                 ;; if a sibling of the current dir is "graal", we need to also bind this one as read/write and also check if it's a worktree
                 (graal-dir (expand-file-name "../graal"))
