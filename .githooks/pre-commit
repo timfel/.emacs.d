@@ -43,6 +43,7 @@ fi
 
 "$EMACS_BIN" -Q --batch \
   -l "$COMPILE_INIT" \
-  --eval "(setq byte-compile-warnings '(not obsolete))" \
+  --eval "(setq byte-compile-warnings t
+                byte-compile-error-on-warn t)" \
   -f batch-byte-compile \
   $FILES

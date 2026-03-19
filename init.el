@@ -33,8 +33,8 @@
 		           (interactive)
 		           (push-mark)
 		           (if (xref-marker-stack-empty-p)
-		               (xref-pop-marker-stack)
-		             (previous-buffer))))
+		               (previous-buffer)
+		             (xref-go-back))))
          ("C-x <right>" . pop-global-mark)
          ("C-<down>" . (lambda (n) (interactive "p") (forward-line n) (scroll-up n)))
          ("C-<up>" . (lambda (n) (interactive "p") (forward-line (- n)) (scroll-down n)))
@@ -917,7 +917,8 @@
 (use-package emacs-theme-detection
   :ensure t
   :defer t
-  :preface
+  :functions (emacs-theme-detection-is-dark emacs-theme-detection-is-light)
+  :init
   (autoload #'emacs-theme-detection-is-dark "emacs-theme-detection")
   (autoload #'emacs-theme-detection-is-light "emacs-theme-detection")
   :vc (:url "https://github.com/timfel/emacs-theme-detection.git" :branch "main" :rev :newest))
@@ -1537,7 +1538,7 @@ input means nil arguments."
 
   (setq
    agent-shell-openai-codex-environment (agent-shell-make-environment-variables :inherit-env t)
-   agent-shell-openai-authentication (agent-shell-openai-make-authentication :codex-api-key #'oca-key)
+   agent-shell-openai-authentication (agent-shell-openai-make-authentication :codex-api-key "")
    agent-shell-opencode-authentication (agent-shell-opencode-make-authentication :api-key #'oca-key)))
 
 (use-package agent-shell-attention

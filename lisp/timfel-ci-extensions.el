@@ -17,8 +17,8 @@
                   "timfel-agent-shell-extensions"
                   (task-specs &optional directory))
 
-(defvar ci-dashboard-base-url)
-(defvar ci-dashboard-mode-map)
+(defvar ci-dashboard-base-url nil)
+(defvar ci-dashboard-mode-map nil)
 
 (defconst timfel/ci-dashboard--jira-key-regexp
   "\\b[A-Z][A-Z0-9]+-[0-9]+\\b"
@@ -34,9 +34,9 @@
 
 (defun timfel/ci-dashboard--section-heading (section)
   "Return the visible heading text for SECTION."
-  (let ((start (slot-value section 'start))
-        (content (slot-value section 'content))
-        (end (slot-value section 'end)))
+  (let ((start (funcall #'slot-value section 'start))
+        (content (funcall #'slot-value section 'content))
+        (end (funcall #'slot-value section 'end)))
     (string-trim
      (buffer-substring-no-properties
       start
