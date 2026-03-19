@@ -107,6 +107,9 @@
   :after timfel
   :commands ci-dashboard)
 
+(use-package timfel-ci-extensions
+  :after timfel)
+
 (use-package oca
   :after timfel
   :commands (oca-key oca-update-codex-config oca-update-opencode-config oca-codex-login))
