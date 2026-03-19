@@ -423,10 +423,15 @@ Return the primary worktree directory."
               (agent-shell-buffers))))
 
 (defun timfel/agent-shell--start-shell-in-directory (directory)
-  "Start or reuse an `agent-shell' rooted at DIRECTORY."
+  "Start or reuse an `agent-shell' rooted at DIRECTORY.
+
+When this needs to bootstrap a new shell buffer, keep
+`agent-shell-session-strategy' at `prompt' so the user can decide whether to
+resume an existing session for DIRECTORY."
   (or (timfel/agent-shell--buffer-for-directory directory)
       (let* ((default-directory
               (file-name-as-directory (expand-file-name directory)))
+             (agent-shell-session-strategy 'prompt)
              (config (or (agent-shell--resolve-preferred-config)
                          (user-error
                           "No preferred agent-shell config is available"))))
@@ -434,12 +439,67 @@ Return the primary worktree directory."
              ((fboundp 'agent-shell--start)
               (agent-shell--start :config config
                                   :no-focus t
-                                  :new-session t
-                                  :session-strategy 'new))
+                                  :session-strategy 'prompt))
              ((fboundp 'agent-shell-start)
               (agent-shell-start :config config)))
             (timfel/agent-shell--buffer-for-directory directory)
             (error "Could not start agent-shell for %s" directory)))))
+
+(defun timfel/agent-shell--wait-for-session-selection (shell-buffer)
+  "Wait until SHELL-BUFFER finishes its session-selection prompt cycle.
+
+Return a live shell buffer rooted at the same directory when one remains
+available after the prompt.  Return nil when the prompt was cancelled or the
+bootstrap shell was discarded."
+  (if (or (not (buffer-live-p shell-buffer))
+          (not (with-current-buffer shell-buffer
+                 (and (derived-mode-p 'agent-shell-mode)
+                      (eq agent-shell-session-strategy 'prompt)
+                      (not (map-nested-elt agent-shell--state '(:session :id)))))))
+      shell-buffer
+    (let ((resolved nil)
+          (done nil))
+      (with-current-buffer shell-buffer
+        (let ((origin-directory
+               (file-name-as-directory (expand-file-name default-directory))))
+          (let (session-selected-token
+                session-cancelled-token
+                clean-up-token)
+            (cl-labels
+                ((finish (&optional buffer)
+                   (setq resolved buffer
+                         done t)
+                   (dolist (token (delq nil (list session-selected-token
+                                                  session-cancelled-token
+                                                  clean-up-token)))
+                     (when (buffer-live-p shell-buffer)
+                       (agent-shell-unsubscribe :subscription token)))
+                   (when (> (recursion-depth) 0)
+                     (exit-recursive-edit))))
+              (setq session-selected-token
+                    (agent-shell-subscribe-to
+                     :shell-buffer shell-buffer
+                     :event 'session-selected
+                     :on-event (lambda (_event)
+                                 (finish (or (and (buffer-live-p shell-buffer) shell-buffer)
+                                             (timfel/agent-shell--buffer-for-directory
+                                              origin-directory))))))
+              (setq session-cancelled-token
+                    (agent-shell-subscribe-to
+                     :shell-buffer shell-buffer
+                     :event 'session-selection-cancelled
+                     :on-event (lambda (_event)
+                                 (finish nil))))
+              (setq clean-up-token
+                    (agent-shell-subscribe-to
+                     :shell-buffer shell-buffer
+                     :event 'clean-up
+                     :on-event (lambda (_event)
+                                 (finish (timfel/agent-shell--buffer-for-directory
+                                          origin-directory)))))
+              (unless done
+                (recursive-edit))))))
+      resolved)))
 
 (defun timfel/agent-shell--dired-marked-directories ()
   "Return normalized marked directories from the current Dired buffer."
@@ -471,18 +531,27 @@ Return the primary worktree directory."
         (cancel-timer timer)))))
 
 (defun timfel/agent-shell--normalize-task-specs (task-specs)
-  "Normalize TASK-SPECS into a list of `(TITLE . TASK)' pairs."
-  (mapcar (lambda (spec)
-            (cond
-             ((stringp spec)
-              (cons spec spec))
-             ((and (consp spec)
-                   (stringp (car spec))
-                   (stringp (cdr spec)))
-              spec)
-             (t
-              (user-error "Invalid task spec: %S" spec))))
-          task-specs))
+  "Normalize TASK-SPECS into plists with `:title', `:task', and `:directory'."
+  (mapcar
+   (lambda (spec)
+     (cond
+      ((stringp spec)
+       (list :title spec :task spec))
+      ((and (consp spec)
+            (stringp (car spec))
+            (stringp (cdr spec)))
+       (list :title (car spec) :task (cdr spec)))
+      ((and (listp spec)
+            (plist-member spec :directory)
+            (stringp (plist-get spec :directory)))
+       (let ((directory (file-name-as-directory
+                         (expand-file-name (plist-get spec :directory)))))
+         (list :title (plist-get spec :title)
+               :task (plist-get spec :task)
+               :directory directory)))
+      (t
+       (user-error "Invalid task spec: %S" spec))))
+   task-specs))
 
 (defun timfel/agent-shell--rename-shell-buffer (shell-buffer title)
   "Rename SHELL-BUFFER to TITLE using `agent-shell-rename-buffer' when available."
@@ -627,64 +696,50 @@ With numeric PREFIX 1, tile only idle agent-shell buffers."
 
 This always enqueues both requests first so the planning prompt is guaranteed
 to run before TASK even when the shell has just started and is currently idle."
-  (with-current-buffer shell-buffer
-    (unless (derived-mode-p 'agent-shell-mode)
-      (error "Not in an agent-shell buffer: %s" (buffer-name shell-buffer)))
-    (unless (fboundp 'agent-shell--enqueue-request)
-      (error "agent-shell does not expose its request queue helper"))
-    (agent-shell--enqueue-request :prompt timfel/agent-shell-planning-request)
-    (agent-shell--enqueue-request :prompt task)
-    (unless (shell-maker-busy)
-      (agent-shell-resume-pending-requests))))
+  (when (and task (not (string-empty-p task)))
+    (with-current-buffer shell-buffer
+      (unless (derived-mode-p 'agent-shell-mode)
+        (error "Not in an agent-shell buffer: %s" (buffer-name shell-buffer)))
+      (unless (fboundp 'agent-shell--enqueue-request)
+        (error "agent-shell does not expose its request queue helper"))
+      (agent-shell--enqueue-request :prompt timfel/agent-shell-planning-request)
+      (agent-shell--enqueue-request :prompt task)
+      (unless (shell-maker-busy)
+        (agent-shell-resume-pending-requests)))))
 
 ;;;###autoload
 (defun timfel/dired-agent-shell-marked-directories ()
   "Interactively start or resume `agent-shell' for each marked Dired directory.
 
-For each marked directory in the current Dired buffer, temporarily bind
-`default-directory' to that directory and `agent-shell-session-strategy' to
-`prompt', then call `agent-shell' interactively.  After each directory except
-the last, wait until Emacs has been idle for
-`timfel/dired-agent-shell-idle-delay' seconds before moving to the next one."
+For each marked directory in the current Dired buffer, reuse the shared
+fan-out helper so each directory waits for its own session-selection prompt
+before moving on to the next one."
   (interactive)
   (unless (require 'agent-shell nil t)
     (user-error "agent-shell is not installed"))
   (let* ((directories (timfel/agent-shell--dired-marked-directories))
-         (total (length directories))
-         (index 0))
-    (dolist (directory directories)
-      (setq index (1+ index))
-      (let ((default-directory directory)
-            (agent-shell-session-strategy 'prompt))
-        (condition-case err
-            (call-interactively #'agent-shell)
-          (quit
-           (message "agent-shell quit for %s" directory))
-          (error
-           (message "agent-shell error for %s: %s"
-                    directory
-                    (error-message-string err)))))
-      (when (< index total)
-        (message
-         (concat "Started agent-shell for %s (%d/%d). "
-                 "Continuing after %.1fs of Emacs idle time.")
-         directory index total timfel/dired-agent-shell-idle-delay)
-        (timfel/agent-shell--pause-until-idle)))
+         (results
+          (timfel/agent-shell-fan-out-worktrees
+           (mapcar (lambda (directory)
+                     (list :directory directory))
+                   directories))))
     (message "Started agent-shell for %d marked director%s"
-             total
-             (if (= total 1) "y" "ies"))))
+             (length results)
+             (if (= (length results) 1) "y" "ies"))))
 
 ;;;###autoload
 (defun timfel/agent-shell-fan-out-worktrees (task-specs &optional directory)
   "Create one worktree-backed `agent-shell' per entry in TASK-SPECS.
 
-TASK-SPECS may be either a list of strings, or an alist of `(TITLE . TASK)'
-pairs.  Each TASK is queued into its own shell rooted at DIRECTORY's Git
-repository, and each shell buffer is renamed to TITLE.  When DIRECTORY is nil,
-use `default-directory'.
+TASK-SPECS may be a list of strings, an alist of `(TITLE . TASK)' pairs, or
+plists containing `:directory' plus optional `:title' and `:task'.  Specs with
+`:directory' start or resume shells in those existing directories.  Other specs
+create or reuse worktrees below DIRECTORY's Git repository, rename each shell
+buffer to TITLE, and queue TASK.  When DIRECTORY is nil, use
+`default-directory'.
 
 Interactively, prompt for the number of worktrees, then read a TITLE and TASK
-for each one.  Return a plist for each created shell with `:title', `:task',
+for each one.  Return a plist for each started shell with `:title', `:task',
 `:worktree', and `:buffer' keys."
   (interactive
    (list
@@ -706,31 +761,58 @@ for each one.  Return a plist for each created shell with `:title', `:task',
     default-directory))
   (unless (require 'agent-shell nil t)
     (user-error "agent-shell is not installed"))
-  (let* ((repo-root (timfel/agent-shell--git-root directory))
-         (task-specs (timfel/agent-shell--normalize-task-specs task-specs)))
-    (unless repo-root
+  (let* ((task-specs (timfel/agent-shell--normalize-task-specs task-specs))
+         (needs-repo-root (seq-some (lambda (spec)
+                                      (null (plist-get spec :directory)))
+                                    task-specs))
+         (repo-root (when needs-repo-root
+                      (timfel/agent-shell--git-root directory))))
+    (when (and needs-repo-root (not repo-root))
       (user-error "Not inside a git repository: %s"
                   (expand-file-name (or directory default-directory))))
-    (prog1
-        (cl-loop for (title . task) in task-specs
-                 for index from 1
-                 collect
-                 (let* ((worktree-dir
-                         (timfel/agent-shell--create-worktree
-                          repo-root title index))
-                        (shell-buffer
-                         (timfel/agent-shell--start-shell-in-directory
-                          worktree-dir)))
-                   (timfel/agent-shell--rename-shell-buffer shell-buffer title)
-                   (timfel/agent-shell--queue-startup-requests
-                    shell-buffer task)
-                   (list :title title
-                         :task task
-                         :worktree worktree-dir
-                         :buffer (buffer-name shell-buffer))))
-      (message "Queued %d task(s) across %d worktree shell(s)"
-               (length task-specs)
-               (length task-specs)))))
+    (let* ((results
+           (delq nil
+                 (cl-loop for spec in task-specs
+                          for index from 1
+                          collect
+                          (let* ((title (plist-get spec :title))
+                                 (task (plist-get spec :task))
+                                 (worktree-dir
+                                  (or (plist-get spec :directory)
+                                      (timfel/agent-shell--create-worktree
+                                       repo-root title index)))
+                                 (shell-buffer
+                                  (timfel/agent-shell--wait-for-session-selection
+                                   (timfel/agent-shell--start-shell-in-directory
+                                    worktree-dir))))
+                            (if (not (buffer-live-p shell-buffer))
+                                (progn
+                                  (message "Skipped agent-shell setup for %s"
+                                           worktree-dir)
+                                  nil)
+                              (when (and title (not (string-empty-p title)))
+                                (timfel/agent-shell--rename-shell-buffer
+                                 shell-buffer title))
+                              (timfel/agent-shell--queue-startup-requests
+                               shell-buffer task)
+                              (list :title title
+                                    :task task
+                                    :worktree worktree-dir
+                                    :buffer (buffer-name shell-buffer)))))))
+           (queued-count
+            (length
+             (seq-filter (lambda (result)
+                           (let ((task (plist-get result :task)))
+                             (and task (not (string-empty-p task)))))
+                         results))))
+      (message "Started %d agent-shell%s and queued %d task%s"
+               (length results)
+               (if (= (length results) 1) "" "s")
+               queued-count
+               (if (= queued-count 1)
+                   ""
+                 "s"))
+      results)))
 
 (provide 'timfel-agent-shell-extensions)
 
