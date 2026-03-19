@@ -171,8 +171,19 @@
 
 (use-package markdown-mode
   :ensure t
-  :config (setq markdown-command "cmark-gfm --extension table")
-  :mode ("\\.md$"))
+  :mode ("\\.md$")
+  :config
+  (setq markdown-command "cmark-gfm --extension table")
+  (with-eval-after-load 'markdown-overlays
+    (advice-add 'markdown-overlays--parse-local-link :around
+                (lambda (original-fn url)
+                  "Treat an existing plain local path URL as a local file link."
+                  (or (funcall original-fn url)
+                      (let ((filepath (expand-file-name url)))
+                        (when (or (file-exists-p filepath)
+                                  (file-directory-p filepath))
+                          (list (cons :file filepath)
+                                (cons :line nil)))))))))
 
 (use-package lua-mode
   :ensure t
