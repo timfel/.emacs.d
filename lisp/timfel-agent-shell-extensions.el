@@ -42,6 +42,11 @@
              (directory-file-name
               (expand-file-name gitdir default-directory)))))))))
 
+(defun timfel/agent-shell--bwrap-bind-args (mode path)
+  "Return bubblewrap bind arguments for PATH using MODE when PATH exists."
+  (when (file-exists-p path)
+    (list mode path path)))
+
 (defun timfel/agent-shell--git-root (&optional directory)
   "Return the git root for DIRECTORY, or nil when outside Git."
   (let ((default-directory
@@ -443,8 +448,7 @@ Return the primary worktree directory."
 (defun timfel/agent-shell-command-prefix-bwrap (_buffer)
   "Return a `bwrap' command prefix for `agent-shell', or nil when unavailable."
   (when (executable-find "bwrap")
-    (let* ((tmpdir (format "/tmp/bcodex-session/%s"
-                           (format-time-string "%Y-%m-%d-%H-%M-%S")))
+    (let* ((tmpdir (make-temp-file "/tmp/bcodex-session/" t))
            (common-root (or (timfel/agent-shell--git-common-root)
                             default-directory))
            (graal-dir (expand-file-name "../graal"))
@@ -454,40 +458,46 @@ Return the primary worktree directory."
            (graal-common-root (if (file-directory-p graal-dir)
                                   (or (timfel/agent-shell--git-common-root graal-dir)
                                       graal-dir)
-                                extra-dir-to-bind)))
-      (make-directory tmpdir t)
-      `("bwrap" "--die-with-parent" "--new-session"
-        "--ro-bind" "/" "/"
-        "--bind" ,default-directory ,default-directory
-        "--bind" ,common-root ,common-root
-        "--bind" ,extra-dir-to-bind ,extra-dir-to-bind
-        "--bind" ,graal-common-root ,graal-common-root
-        "--bind" ,(expand-file-name "~/dev/mx") ,(expand-file-name "~/dev/mx")
-        "--bind" ,(expand-file-name "~/dev/graal") ,(expand-file-name "~/dev/graal")
-        "--bind" ,(expand-file-name "~/dev/graalpython") ,(expand-file-name "~/dev/graalpython")
-        "--bind" ,(expand-file-name "~/dev/graal-enterprise") ,(expand-file-name "~/dev/graal-enterprise")
-        "--bind" ,(expand-file-name "~/.cache") ,(expand-file-name "~/.cache")
-        "--bind" ,(expand-file-name "~/.mx") ,(expand-file-name "~/.mx")
-        "--bind" ,(expand-file-name "~/dev/.metadata") ,(expand-file-name "~/dev/.metadata")
-        "--bind" ,(expand-file-name "~/.eclipse") ,(expand-file-name "~/.eclipse")
-        "--bind" ,(expand-file-name "~/.codex") ,(expand-file-name "~/.codex")
-        "--bind" ,(expand-file-name "~/.opencode") ,(expand-file-name "~/.opencode")
-        "--bind" ,(expand-file-name "~/.config/opencode") ,(expand-file-name "~/.config/opencode")
-        "--proc" "/proc"
-        "--dev" "/dev"
-        "--tmpfs" "/tmp"
-        "--tmpfs" ,timfel/cloud-storage
-        "--bind" ,tmpdir ,tmpdir
-        "--chdir" ,default-directory
-        "--setenv" "HTTP_PROXY" ,(or (getenv "HTTP_PROXY") "")
-        "--setenv" "HTTPS_PROXY" ,(or (getenv "HTTPS_PROXY") "")
-        "--setenv" "NO_PROXY" ,(or (getenv "NO_PROXY") "")
-        "--setenv" "HOME" ,(getenv "HOME")
-        "--setenv" "TMPDIR" ,tmpdir
-        "--setenv" "XDG_CACHE_INNER" ,(expand-file-name ".agent-shell/xdgcache")
-        "--setenv" "XDG_STATE_INNER" ,(expand-file-name ".agent-shell/xdgstate")
-        "--setenv" "XDG_RUNTIME_INNER" ,(expand-file-name ".agent-shell/xdgruntime")
-        "--"))))
+                                extra-dir-to-bind))
+           (base-args
+            `("bwrap" "--die-with-parent" "--new-session"
+              "--ro-bind" "/" "/"
+              "--bind" ,default-directory ,default-directory
+              "--bind" ,common-root ,common-root
+              "--bind" ,extra-dir-to-bind ,extra-dir-to-bind
+              "--bind" ,graal-common-root ,graal-common-root))
+           (optional-bind-args
+            (delq nil
+                  (mapcar (lambda (path)
+                            (timfel/agent-shell--bwrap-bind-args "--bind" path))
+                          (list (expand-file-name "~/dev/mx")
+                                (expand-file-name "~/dev/graal")
+                                (expand-file-name "~/dev/graalpython")
+                                (expand-file-name "~/dev/graal-enterprise")
+                                (expand-file-name "~/.cache")
+                                (expand-file-name "~/.mx")
+                                (expand-file-name "~/dev/.metadata")
+                                (expand-file-name "~/.eclipse")
+                                (expand-file-name "~/.codex")
+                                (expand-file-name "~/.opencode")
+                                (expand-file-name "~/.config/opencode"))))))
+       (append
+       base-args
+       (apply #'append optional-bind-args)
+       `("--proc" "/proc"
+         "--dev" "/dev"
+         "--tmpfs" ,timfel/cloud-storage
+         "--bind" ,tmpdir "/tmp"
+         "--chdir" ,default-directory
+         "--setenv" "HTTP_PROXY" ,(or (getenv "HTTP_PROXY") "")
+         "--setenv" "HTTPS_PROXY" ,(or (getenv "HTTPS_PROXY") "")
+         "--setenv" "NO_PROXY" ,(or (getenv "NO_PROXY") "")
+         "--setenv" "HOME" ,(getenv "HOME")
+         "--setenv" "TMPDIR" "/tmp"
+         "--setenv" "XDG_CACHE_INNER" ,(expand-file-name ".agent-shell/xdgcache")
+         "--setenv" "XDG_STATE_INNER" ,(expand-file-name ".agent-shell/xdgstate")
+         "--setenv" "XDG_RUNTIME_INNER" ,(expand-file-name ".agent-shell/xdgruntime")
+         "--")))))
 
 (defun timfel/agent-shell-tile-buffers-grid (&optional prefix)
   "Tile live `agent-shell' buffers in the selected frame as a grid.
