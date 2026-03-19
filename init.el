@@ -901,6 +901,7 @@
 
 (use-package emacs-theme-detection
   :ensure t
+  :defer t
   :init
   (autoload #'emacs-theme-detection-is-dark "emacs-theme-detection")
   (autoload #'emacs-theme-detection-is-light "emacs-theme-detection")
