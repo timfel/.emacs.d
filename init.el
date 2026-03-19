@@ -899,6 +899,13 @@
 (use-package timfel-gptel-tools
   :after (gptel llm-tool-collection))
 
+(use-package emacs-theme-detection
+  :ensure t
+  :init
+  (autoload #'emacs-theme-detection-is-dark "emacs-theme-detection")
+  (autoload #'emacs-theme-detection-is-light "emacs-theme-detection")
+  :vc (:url "https://github.com/timfel/emacs-theme-detection.git" :branch "main" :rev :newest))
+
 (use-package xt-mouse
   :if (eq window-system nil)
   :config (run-with-idle-timer 0.1 nil #'xterm-mouse-mode +1))
