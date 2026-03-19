@@ -1452,7 +1452,8 @@ input means nil arguments."
               agent-shell-openai-make-authentication
               agent-shell-opencode-make-authentication
               oca-key
-              oca-codex-login)
+              oca-codex-login
+              timfel/agent-shell-command-prefix-bwrap)
   :commands agent-shell
   :pin melpa
   :custom
@@ -1465,62 +1466,7 @@ input means nil arguments."
   (agent-shell-show-config-icons nil)
   (agent-shell-show-usage-at-turn-end t)
   (agent-shell-text-file-capabilities nil)
-  (agent-shell-command-prefix
-   (lambda (buffer)
-     (if (executable-find "bwrap")
-         (let* ((tmpdir (format "/tmp/bcodex-session/%s" (format-time-string "%Y-%m-%d-%H-%M-%S")))
-                ;; I cwd is a git worktree, we need to find out and also bind the main checkout location
-                (gitdir (ignore-errors
-                          (string-trim (shell-command-to-string "git rev-parse --git-common-dir"))))
-                (common-root (if (and gitdir (not (string-empty-p gitdir)))
-                                 (file-name-directory (directory-file-name (expand-file-name gitdir)))
-                               default-directory))
-                ;; if a sibling of the current dir is "graal", we need to also bind this one as read/write and also check if it's a worktree
-                (graal-dir (expand-file-name "../graal"))
-                (extra-dir-to-bind (if (file-directory-p graal-dir) graal-dir default-directory))
-                (graal-common-root (if (file-directory-p graal-dir)
-                                       (let ((gdir (ignore-errors
-                                                     (string-trim (shell-command-to-string
-                                                                   (format "cd %s && git rev-parse --git-common-dir"
-                                                                           (shell-quote-argument graal-dir)))))))
-                                         (if (and gdir (not (string-empty-p gdir)))
-                                             (file-name-directory (directory-file-name (expand-file-name gdir graal-dir)))
-                                           graal-dir))
-                                     extra-dir-to-bind)))
-           (make-directory tmpdir t)
-           `("bwrap" "--die-with-parent" "--new-session"
-             "--ro-bind" "/" "/"
-             "--bind" ,default-directory ,default-directory
-             "--bind" ,common-root ,common-root
-             "--bind" ,extra-dir-to-bind ,extra-dir-to-bind
-             "--bind" ,graal-common-root ,graal-common-root
-             "--bind" ,(expand-file-name "~/dev/mx") ,(expand-file-name "~/dev/mx")
-             "--bind" ,(expand-file-name "~/dev/graal") ,(expand-file-name "~/dev/graal")
-             "--bind" ,(expand-file-name "~/dev/graalpython") ,(expand-file-name "~/dev/graalpython")
-             "--bind" ,(expand-file-name "~/dev/graal-enterprise") ,(expand-file-name "~/dev/graal-enterprise")
-             "--bind" ,(expand-file-name "~/.cache") ,(expand-file-name "~/.cache")
-             "--bind" ,(expand-file-name "~/.mx") ,(expand-file-name "~/.mx")
-             "--bind" ,(expand-file-name "~/dev/.metadata") ,(expand-file-name "~/dev/.metadata")
-             "--bind" ,(expand-file-name "~/.eclipse") ,(expand-file-name "~/.eclipse")
-             "--bind" ,(expand-file-name "~/.codex") ,(expand-file-name "~/.codex")
-             "--bind" ,(expand-file-name "~/.opencode") ,(expand-file-name "~/.opencode")
-             "--bind" ,(expand-file-name "~/.config/opencode") ,(expand-file-name "~/.config/opencode")
-             "--proc" "/proc"
-             "--dev" "/dev"
-             "--tmpfs" "/tmp"
-             "--tmpfs" ,timfel/cloud-storage
-             "--bind" ,tmpdir ,tmpdir
-             "--chdir" ,default-directory
-             "--setenv" "HTTP_PROXY" ,(or (getenv "HTTP_PROXY") "")
-             "--setenv" "HTTPS_PROXY" ,(or (getenv "HTTPS_PROXY") "")
-             "--setenv" "NO_PROXY" ,(or (getenv "NO_PROXY") "")
-             "--setenv" "HOME" ,(getenv "HOME")
-             "--setenv" "TMPDIR" ,tmpdir
-             "--setenv" "XDG_CACHE_INNER" ,(expand-file-name ".agent-shell/xdgcache")
-             "--setenv" "XDG_STATE_INNER"  ,(expand-file-name ".agent-shell/xdgstate")
-             "--setenv" "XDG_RUNTIME_INNER"  ,(expand-file-name ".agent-shell/xdgruntime")
-             "--"))
-       nil)))
+  (agent-shell-command-prefix #'timfel/agent-shell-command-prefix-bwrap)
   :config
   ;; If any .agents/skills from this repo do not exist in $HOME/.agents/skills/ (Unix) or $Env:USERPROFILE/.agents/skills (Windows)
   ;; then symlink them there
