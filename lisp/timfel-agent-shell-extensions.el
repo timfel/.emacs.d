@@ -7,6 +7,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'dired)
 (require 'seq)
 (require 'subr-x)
 (require 'timfel)
@@ -23,6 +24,9 @@
   "Initial request queued before each fan-out agent task."
   :type 'string
   :group 'timfel)
+
+(defvar timfel/dired-agent-shell-idle-delay 2
+  "Seconds of Emacs idle time before advancing to the next marked directory.")
 
 (defun timfel/agent-shell--git-root (&optional directory)
   "Return the git root for DIRECTORY, or nil when outside Git."
@@ -349,6 +353,35 @@ Return the primary worktree directory."
             (timfel/agent-shell--buffer-for-directory directory)
             (error "Could not start agent-shell for %s" directory)))))
 
+(defun timfel/agent-shell--dired-marked-directories ()
+  "Return normalized marked directories from the current Dired buffer."
+  (unless (derived-mode-p 'dired-mode)
+    (user-error "Current buffer is not a Dired buffer"))
+  (let ((directories
+         (seq-uniq
+          (mapcar (lambda (path)
+                    (file-name-as-directory (expand-file-name path)))
+                  (dired-get-marked-files nil nil #'file-directory-p))
+          #'string=)))
+    (unless directories
+      (user-error "No marked directories in %s" (buffer-name)))
+    directories))
+
+(defun timfel/agent-shell--pause-until-idle ()
+  "Pause the current command until Emacs has been idle for long enough."
+  (let ((timer nil))
+    (unwind-protect
+        (progn
+          (setq timer
+                (run-with-idle-timer
+                 timfel/dired-agent-shell-idle-delay nil
+                 (lambda ()
+                   (when (> (recursion-depth) 0)
+                     (exit-recursive-edit)))))
+          (recursive-edit))
+      (when timer
+        (cancel-timer timer)))))
+
 (defun timfel/agent-shell--normalize-task-specs (task-specs)
   "Normalize TASK-SPECS into a list of `(TITLE . TASK)' pairs."
   (mapcar (lambda (spec)
@@ -379,19 +412,46 @@ Return the primary worktree directory."
           (string-lessp (buffer-name left)
                         (buffer-name right)))))
 
+(defun timfel/agent-shell--buffer-busy-p (buffer)
+  "Return non-nil when agent shell BUFFER is currently busy."
+  (with-current-buffer buffer
+    (and (derived-mode-p 'agent-shell-mode)
+         (fboundp 'shell-maker-busy)
+         (shell-maker-busy))))
+
 (defun timfel/agent-shell--grid-dimensions (count)
   "Return `(COLUMNS . ROWS)' for arranging COUNT buffers in a grid."
   (let* ((columns (max 1 (ceiling (sqrt count))))
          (rows (max 1 (ceiling (/ (float count) columns)))))
     (cons columns rows)))
 
-(defun timfel/agent-shell-tile-buffers-grid ()
-  "Tile all live `agent-shell' buffers in the selected frame as a grid."
-  (interactive)
-  (let* ((buffers (timfel/agent-shell--live-buffers))
+(defun timfel/agent-shell-tile-buffers-grid (&optional prefix)
+  "Tile live `agent-shell' buffers in the selected frame as a grid.
+
+With no PREFIX, tile all live agent-shell buffers.
+With a PREFIX other than numeric 1, tile only busy agent-shell buffers.
+With numeric PREFIX 1, tile only idle agent-shell buffers."
+  (interactive "P")
+  (let* ((selector (and prefix
+                        (if (= (prefix-numeric-value prefix) 1)
+                            #'not
+                          #'identity)))
+         (buffers (if selector
+                      (seq-filter
+                       (lambda (buffer)
+                         (funcall selector
+                                  (timfel/agent-shell--buffer-busy-p buffer)))
+                       (timfel/agent-shell--live-buffers))
+                    (timfel/agent-shell--live-buffers)))
          (count (length buffers)))
     (if (zerop count)
-        (message "No live agent-shell buffers")
+        (message
+         (cond
+          ((not prefix) "No live agent-shell buffers")
+          ((= (prefix-numeric-value prefix) 1)
+           "No idle agent-shell buffers")
+          (t
+           "No busy agent-shell buffers")))
       (pcase-let* ((`(,columns . ,rows)
                     (timfel/agent-shell--grid-dimensions count)))
         (let* ((root (selected-window))
@@ -433,6 +493,43 @@ to run before TASK even when the shell has just started and is currently idle."
     (agent-shell--enqueue-request :prompt task)
     (unless (shell-maker-busy)
       (agent-shell-resume-pending-requests))))
+
+;;;###autoload
+(defun timfel/dired-agent-shell-marked-directories ()
+  "Interactively start or resume `agent-shell' for each marked Dired directory.
+
+For each marked directory in the current Dired buffer, temporarily bind
+`default-directory' to that directory and `agent-shell-session-strategy' to
+`prompt', then call `agent-shell' interactively.  After each directory except
+the last, wait until Emacs has been idle for
+`timfel/dired-agent-shell-idle-delay' seconds before moving to the next one."
+  (interactive)
+  (unless (require 'agent-shell nil t)
+    (user-error "agent-shell is not installed"))
+  (let* ((directories (timfel/agent-shell--dired-marked-directories))
+         (total (length directories))
+         (index 0))
+    (dolist (directory directories)
+      (setq index (1+ index))
+      (let ((default-directory directory)
+            (agent-shell-session-strategy 'prompt))
+        (condition-case err
+            (call-interactively #'agent-shell)
+          (quit
+           (message "agent-shell quit for %s" directory))
+          (error
+           (message "agent-shell error for %s: %s"
+                    directory
+                    (error-message-string err)))))
+      (when (< index total)
+        (message
+         (concat "Started agent-shell for %s (%d/%d). "
+                 "Continuing after %.1fs of Emacs idle time.")
+         directory index total timfel/dired-agent-shell-idle-delay)
+        (timfel/agent-shell--pause-until-idle)))
+    (message "Started agent-shell for %d marked director%s"
+             total
+             (if (= total 1) "y" "ies"))))
 
 ;;;###autoload
 (defun timfel/agent-shell-fan-out-worktrees (task-specs &optional directory)

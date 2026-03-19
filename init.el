@@ -117,9 +117,10 @@
 
 (use-package timfel-agent-shell-extensions
   :commands (timfel/agent-shell-fan-out-worktrees
+             timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-tile-buffers-grid)
   :bind ("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
-  :after timfel)
+  :after (timfel agent-shell))
 
 (use-package timfel-jira-extensions
   :commands (timfel/jira-periodic-issues
