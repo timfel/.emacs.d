@@ -364,6 +364,7 @@
 
 (use-package project
   :bind (("C-t" . project-or-external-find-file))
+  :functions (project-try-vc)
   :preface
   (defcustom project-markers-filenames
     '("Cargo.toml" "compile_commands.json" "compile_flags.txt"
@@ -401,7 +402,7 @@
   (add-to-list 'vc-directory-exclusion-list "eln-cache"))
 
 (use-package vscode-project
-  :after (project project-markers))
+  :after project)
 
 (use-package company
   :ensure t
