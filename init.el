@@ -124,8 +124,10 @@
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-tile-buffers-grid)
   :hook (agent-shell-mode . timfel/agent-shell-recover-live-set)
-  :bind ("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
-  :after (timfel agent-shell))
+  :bind (("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
+         :map dired-mode-map
+         ("C-x a i" . timfel/dired-agent-shell-marked-directories))
+  :after timfel)
 
 (use-package timfel-jira-extensions
   :commands (timfel/jira-periodic-issues
@@ -836,8 +838,7 @@
                         :host "localhost:11434"
                         :stream t
                         :models '(gemma3n:latest gemma3n-tools)))
-  (let ((oca (expand-file-name "oca.el" timfel/gist-location)))
-    (if (file-exists-p oca) (load oca)))
+  (ignore-errors (oca-key))
   (setq
    cashpw/gptel-mode-line--indicator-querying "↑GPTEL↑ "
    cashpw/gptel-mode-line--indicator-responding "↓GPTEL↓ "
