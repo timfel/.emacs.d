@@ -151,9 +151,9 @@ Return nil when point is neither on a pull request nor on a job."
     (message "Point must be on a pull request or job")))
 
 (with-eval-after-load 'emacs-ci
-  (keymap-set ci-dashboard-mode-map
-              "C-x a i"
-              #'timfel/ci-dashboard-investigate-with-agent))
+  (bind-key (kbd "C-x a i")
+            #'timfel/ci-dashboard-investigate-with-agent
+            'ci-dashboard-mode-map))
 
 (provide 'timfel-ci-extensions)
 

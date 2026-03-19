@@ -917,7 +917,7 @@
 (use-package emacs-theme-detection
   :ensure t
   :defer t
-  :init
+  :preface
   (autoload #'emacs-theme-detection-is-dark "emacs-theme-detection")
   (autoload #'emacs-theme-detection-is-light "emacs-theme-detection")
   :vc (:url "https://github.com/timfel/emacs-theme-detection.git" :branch "main" :rev :newest))
