@@ -81,3 +81,5 @@ being killed."
           (insert "\n"))))))
 
 (provide 'timfel-agent-shell-recovery)
+
+;;; timfel-agent-shell-recovery.el ends here

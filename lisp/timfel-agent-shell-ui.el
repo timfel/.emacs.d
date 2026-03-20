@@ -11,6 +11,16 @@
 (require 'agent-shell)
 
 ;;;###autoload
+(defun timfel/agent-shell-busy-buffers ()
+  (interactive)
+  (timfel/agent-shell-tile-buffers-grid 0))
+
+;;;###autoload
+(defun timfel/agent-shell-idle-buffers ()
+  (interactive)
+  (timfel/agent-shell-tile-buffers-grid 1))
+
+;;;###autoload
 (defun timfel/agent-shell-tile-buffers-grid (&optional prefix)
   "Tile live `agent-shell' buffers in the selected frame as a grid.
 

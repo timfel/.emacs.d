@@ -27,7 +27,8 @@
            (delete-dups))))
     (unless directories
       (user-error "No marked directories in %s" (buffer-name)))
-    (timfel/agent-shell-fan-out-worktrees directories)))
+    (timfel/agent-shell-fan-out-worktrees
+     (seq-map (lambda (d) (cons d "")) directories))))
 
 (provide 'timfel-agent-shell-extensions)
 
