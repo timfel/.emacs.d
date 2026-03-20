@@ -123,6 +123,7 @@
              timfel/agent-shell-recover-live-set
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-tile-buffers-grid)
+  :config (require 'agent-shell)
   :hook (agent-shell-mode . timfel/agent-shell-recover-live-set)
   :bind (("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
          :map dired-mode-map
