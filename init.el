@@ -120,14 +120,16 @@
 
 (use-package timfel-agent-shell-extensions
   :commands (timfel/agent-shell-fan-out-worktrees
-             timfel/agent-shell-recover-live-set
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-tile-buffers-grid)
-  :hook (agent-shell-mode . timfel/agent-shell-recover-live-set)
   :bind (("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
          :map dired-mode-map
          ("C-x a i" . timfel/dired-agent-shell-marked-directories))
   :after timfel)
+
+(use-package timfel-agent-shell-recovery
+  :commands (timfel/agent-shell-recovery-recover-live-set)
+  :hook (agent-shell-mode . timfel/agent-shell-recovery--update-live-set))
 
 (use-package timfel-jira-extensions
   :commands (timfel/jira-periodic-issues

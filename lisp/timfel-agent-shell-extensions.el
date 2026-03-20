@@ -13,118 +13,23 @@
 (require 'timfel)
 (require 'agent-shell)
 
-(defcustom timfel/agent-shell-worktree-subdirectory
-  ".agent-shell/worktrees"
-  "Relative directory under a git repository for agent-shell worktrees."
-  :type 'string
-  :group 'timfel)
-
 (defcustom timfel/agent-shell-planning-request
   "Go into planning mode"
   "Initial request queued before each fan-out agent task."
   :type 'string
   :group 'timfel)
 
-(defvar timfel/dired-agent-shell-idle-delay 2
-  "Seconds of Emacs idle time before advancing to the next marked directory.")
-
-(defvar timfel/agent-shell-recover-live-set--inhibit-save nil)
-
-;;;###autoload
-(defun timfel/agent-shell-recover-live-set (&optional omit-buffer)
-  "Restore or refresh the saved live set of `agent-shell' directories.
-
-When called interactively, reopen each directory saved in
-`~/.emacs.d/.agent-shell/live-agent-shell-set.el' with `agent-shell'.
-
-When called from `agent-shell-mode-hook', save the current live set and install
-a buffer-local `kill-buffer-hook' that rewrites the snapshot while omitting the
-buffer being killed."
-  (interactive)
-  (let ((state-file (locate-user-emacs-file ".agent-shell/live-agent-shell-set.el")))
-    (if (called-interactively-p 'interactive)
-        (let ((directories
-               (when (file-readable-p state-file)
-                 (with-temp-buffer
-                   (insert-file-contents state-file)
-                   (read (current-buffer)))))
-              (restored 0))
-          (unless directories
-            (user-error "No saved live agent-shell set"))
-          (let ((timfel/agent-shell-recover-live-set--inhibit-save t))
-            (dolist (directory directories)
-              (when (y-or-n-p (format "Restore agent-shell for %s? " directory))
-                (unless (seq-some
-                         (lambda (buffer)
-                           (with-current-buffer buffer
-                             (string=
-                              (file-name-as-directory (expand-file-name default-directory))
-                              (file-name-as-directory (expand-file-name directory)))))
-                         (agent-shell-buffers))
-                  (let ((default-directory directory)
-                        (agent-shell-session-strategy 'prompt))
-                    (call-interactively #'agent-shell)))
-                (setq restored (1+ restored)))))
-          (timfel/agent-shell-recover-live-set)
-          (message "Recovered %d agent-shell director%s"
-                   restored
-                   (if (= restored 1) "y" "ies")))
-      (when (derived-mode-p 'agent-shell-mode)
-        (add-hook 'kill-buffer-hook
-                  (lambda ()
-                    (timfel/agent-shell-recover-live-set (current-buffer)))
-                  nil t))
-      (unless timfel/agent-shell-recover-live-set--inhibit-save
-        (let ((directories
-               (sort
-                (seq-uniq
-                 (delq nil
-                       (mapcar
-                        (lambda (buffer)
-                          (unless (eq buffer omit-buffer)
-                            (with-current-buffer buffer
-                              (and (derived-mode-p 'agent-shell-mode)
-                                   default-directory
-                                   (file-name-as-directory
-                                    (expand-file-name default-directory))))))
-                        (agent-shell-buffers)))
-                 #'string=)
-                #'string-lessp)))
-          (make-directory (file-name-directory state-file) t)
-          (with-temp-file state-file
-            (let ((print-length nil)
-                  (print-level nil))
-              (prin1 directories (current-buffer))
-              (insert "\n"))))))))
-
-(defun timfel/agent-shell--git-common-root (&optional directory)
-  "Return the git common root for DIRECTORY, or nil when unavailable."
-  (let ((default-directory
-         (file-name-as-directory
-          (expand-file-name (or directory default-directory)))))
+(defun timfel/agent-shell--git-common-root (directory)
+  "Return the git common root for DIRECTORY, or DIRECTORY itself when it is not a worktree."
+  (let ((default-directory (file-name-as-directory (expand-file-name directory))))
     (with-temp-buffer
-      (when (zerop (process-file "git" nil t nil
-                                 "rev-parse" "--git-common-dir"))
+      (when (zerop (process-file "git" nil t nil "rev-parse" "--git-common-dir"))
         (let ((gitdir (string-trim (buffer-string))))
-          (unless (string-empty-p gitdir)
+          (if (string-empty-p gitdir)
+              directory
             (file-name-directory
              (directory-file-name
               (expand-file-name gitdir default-directory)))))))))
-
-(defun timfel/agent-shell--bwrap-bind-args (mode path)
-  "Return bubblewrap bind arguments for PATH using MODE when PATH exists."
-  (when (file-exists-p path)
-    (list mode path path)))
-
-(defun timfel/agent-shell--git-root (&optional directory)
-  "Return the git root for DIRECTORY, or nil when outside Git."
-  (let ((default-directory
-         (file-name-as-directory
-          (expand-file-name (or directory default-directory)))))
-    (with-temp-buffer
-      (when (zerop (process-file "git" nil t nil
-                                 "rev-parse" "--show-toplevel"))
-        (string-trim (buffer-string))))))
 
 (defun timfel/agent-shell--slugify (text)
   "Convert TEXT into a short filesystem-safe slug."
@@ -140,15 +45,14 @@ buffer being killed."
   (file-name-nondirectory
    (directory-file-name (expand-file-name repo-root))))
 
-(defun timfel/agent-shell--worktree-name (title)
-  "Create the base worktree directory name for TITLE."
-  (timfel/agent-shell--slugify title))
-
 (defun timfel/agent-shell--worktree-parent (repo-root title &optional suffix)
   "Return the per-task parent directory for REPO-ROOT, TITLE, and SUFFIX."
-  (let* ((base-dir (expand-file-name timfel/agent-shell-worktree-subdirectory
-                                     repo-root))
-         (base-name (timfel/agent-shell--worktree-name title))
+  (let* ((default-directory repo-root)
+         (transcript-dir (funcall agent-shell-transcript-file-path-function))
+         (base-dir (file-name-concat
+                    (file-name-parent-directory (file-name-parent-directory transcript-dir))
+                    "worktrees"))
+         (base-name (timfel/agent-shell--slugify title))
          (name (if suffix
                    (format "%s-%02d" base-name suffix)
                  base-name)))
@@ -451,21 +355,6 @@ Return the primary worktree directory."
       (user-error "No marked directories in %s" (buffer-name)))
     directories))
 
-(defun timfel/agent-shell--pause-until-idle ()
-  "Pause the current command until Emacs has been idle for long enough."
-  (let ((timer nil))
-    (unwind-protect
-        (progn
-          (setq timer
-                (run-with-idle-timer
-                 timfel/dired-agent-shell-idle-delay nil
-                 (lambda ()
-                   (when (> (recursion-depth) 0)
-                     (exit-recursive-edit)))))
-          (recursive-edit))
-      (when timer
-        (cancel-timer timer)))))
-
 (defun timfel/agent-shell--normalize-task-specs (task-specs)
   "Normalize TASK-SPECS into plists with `:title', `:task', and `:directory'."
   (mapcar
@@ -518,15 +407,13 @@ Return the primary worktree directory."
   "Return a `bwrap' command prefix for `agent-shell', or nil when unavailable."
   (when (executable-find "bwrap")
     (let* ((tmpdir (make-temp-file "/tmp/bcodex-session/" t))
-           (common-root (or (timfel/agent-shell--git-common-root)
-                            default-directory))
+           (common-root (timfel/agent-shell--git-common-root default-directory))
            (graal-dir (expand-file-name "../graal"))
            (extra-dir-to-bind (if (file-directory-p graal-dir)
                                   graal-dir
                                 default-directory))
            (graal-common-root (if (file-directory-p graal-dir)
-                                  (or (timfel/agent-shell--git-common-root graal-dir)
-                                      graal-dir)
+                                  (timfel/agent-shell--git-common-root graal-dir)
                                 extra-dir-to-bind))
            (base-args
             `("bwrap" "--die-with-parent" "--new-session"
@@ -538,7 +425,8 @@ Return the primary worktree directory."
            (optional-bind-args
             (delq nil
                   (mapcar (lambda (path)
-                            (timfel/agent-shell--bwrap-bind-args "--bind" path))
+                            (when (file-exists-p path)
+                              (list "--bind" path path)))
                           (list (expand-file-name "~/dev/mx")
                                 (expand-file-name "~/dev/graal")
                                 (expand-file-name "~/dev/graalpython")
@@ -654,6 +542,16 @@ before moving on to the next one."
      (mapcar (lambda (directory)
                (list :directory directory))
              directories))))
+
+(defun timfel/agent-shell--git-root (&optional directory)
+  "Return the git root for DIRECTORY, or nil when outside Git."
+  (let ((default-directory
+         (file-name-as-directory
+          (expand-file-name (or directory default-directory)))))
+    (with-temp-buffer
+      (when (zerop (process-file "git" nil t nil
+                                 "rev-parse" "--show-toplevel"))
+        (string-trim (buffer-string))))))
 
 ;;;###autoload
 (defun timfel/agent-shell-fan-out-worktrees (task-specs &optional directory)
