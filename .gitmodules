@@ -1,6 +1,0 @@
-[submodule "emacs-secondmate"]
-	path = emacs-secondmate
-	url = https://github.com/timfel/emacs-secondmate.git
-[submodule "jsonnet-language-server"]
-	path = jsonnet-language-server
-	url = https://github.com/grafana/jsonnet-language-server
