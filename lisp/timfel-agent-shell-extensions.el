@@ -422,106 +422,20 @@ Return the primary worktree directory."
                    root)))
               (agent-shell-buffers))))
 
-(defun timfel/agent-shell--start-shell-in-directory (directory)
-  "Start or reuse an `agent-shell' rooted at DIRECTORY.
-
-When this needs to bootstrap a new shell buffer, keep
-`agent-shell-session-strategy' at `prompt' so the user can decide whether to
-resume an existing session for DIRECTORY.
-
-Return a plist with `:buffer' and `:new-session-p' keys."
-  (if-let ((shell-buffer (timfel/agent-shell--buffer-for-directory directory)))
-      (list :buffer shell-buffer
-            :new-session-p nil)
-    (let* ((default-directory
-            (file-name-as-directory (expand-file-name directory)))
-           (agent-shell-session-strategy 'prompt)
-           (config (or (agent-shell--resolve-preferred-config)
-                       (user-error
-                        "No preferred agent-shell config is available"))))
-      (list :buffer
-            (or (cond
-                 ((fboundp 'agent-shell--start)
-                  (agent-shell--start :config config
-                                      :no-focus t
-                                      :session-strategy 'prompt))
-                 ((fboundp 'agent-shell-start)
-                  (agent-shell-start :config config)))
-                (timfel/agent-shell--buffer-for-directory directory)
-                (error "Could not start agent-shell for %s" directory))
-            :new-session-p t))))
-
-(defun timfel/agent-shell--wait-for-session-selection (startup)
-  "Wait until STARTUP finishes its session-selection prompt cycle.
-
-STARTUP must be the plist returned by
-`timfel/agent-shell--start-shell-in-directory'.
-
-Return a plist with `:buffer' and `:new-session-p' keys when a shell remains
-available after the prompt.  Return nil when the prompt was cancelled or the
-bootstrap shell was discarded."
-  (let* ((shell-buffer (plist-get startup :buffer))
-         (new-session-p (plist-get startup :new-session-p)))
-    (if (or (not (buffer-live-p shell-buffer))
-            (not (with-current-buffer shell-buffer
-                   (and (derived-mode-p 'agent-shell-mode)
-                        (eq agent-shell-session-strategy 'prompt)
-                        (not (map-nested-elt agent-shell--state '(:session :id)))))))
-        (and (buffer-live-p shell-buffer)
-             (list :buffer shell-buffer
-                   :new-session-p new-session-p))
-      (let ((resolved nil)
-            (done nil))
+(defun timfel/agent-shell--start-shell-in-directory (title directory startup-mode)
+  "Start or reuse an `agent-shell' rooted at DIRECTORY."
+  (if-let* ((config (or (agent-shell--resolve-preferred-config)
+                        (user-error
+                         "No preferred agent-shell config is available")))
+            (shell-buffer (or (timfel/agent-shell--buffer-for-directory directory)
+                             (agent-shell--start :config config
+                                                 :no-focus t
+                                                 :session-strategy startup-mode))))
+      (when (and title (not (string-empty-p title)))
         (with-current-buffer shell-buffer
-          (let ((origin-directory
-                 (file-name-as-directory (expand-file-name default-directory))))
-            (let ((selected-new-session-p new-session-p)
-                  session-selected-token
-                  session-cancelled-token
-                  clean-up-token)
-              (cl-labels
-                  ((finish (&optional buffer is-new-session)
-                     (setq resolved
-                           (and (buffer-live-p buffer)
-                                (list :buffer buffer
-                                      :new-session-p is-new-session))
-                           done t)
-                     (dolist (token (delq nil (list session-selected-token
-                                                    session-cancelled-token
-                                                    clean-up-token)))
-                       (when (buffer-live-p shell-buffer)
-                         (agent-shell-unsubscribe :subscription token)))
-                     (when (> (recursion-depth) 0)
-                       (exit-recursive-edit))))
-                (setq session-selected-token
-                      (agent-shell-subscribe-to
-                       :shell-buffer shell-buffer
-                       :event 'session-selected
-                       :on-event
-                       (lambda (event)
-                         (setq selected-new-session-p
-                               (null (map-elt (map-elt event :data) :session-id)))
-                         (finish (or (and (buffer-live-p shell-buffer) shell-buffer)
-                                     (timfel/agent-shell--buffer-for-directory
-                                      origin-directory))
-                                 selected-new-session-p))))
-                (setq session-cancelled-token
-                      (agent-shell-subscribe-to
-                       :shell-buffer shell-buffer
-                       :event 'session-selection-cancelled
-                       :on-event (lambda (_event)
-                                   (finish nil nil))))
-                (setq clean-up-token
-                      (agent-shell-subscribe-to
-                       :shell-buffer shell-buffer
-                       :event 'clean-up
-                       :on-event (lambda (_event)
-                                   (finish (timfel/agent-shell--buffer-for-directory
-                                            origin-directory)
-                                           selected-new-session-p))))
-                (unless done
-                  (recursive-edit))))))
-        resolved))))
+          (cl-letf (((symbol-function 'read-string)
+                     (lambda (&rest _) title)))
+            (call-interactively #'agent-shell-rename-buffer))))))
 
 (defun timfel/agent-shell--dired-marked-directories ()
   "Return normalized marked directories from the current Dired buffer."
@@ -577,12 +491,7 @@ bootstrap shell was discarded."
 
 (defun timfel/agent-shell--rename-shell-buffer (shell-buffer title)
   "Rename SHELL-BUFFER to TITLE using `agent-shell-rename-buffer' when available."
-  (with-current-buffer shell-buffer
-    (if (fboundp 'agent-shell-rename-buffer)
-        (cl-letf (((symbol-function 'read-string)
-                   (lambda (&rest _) title)))
-          (call-interactively #'agent-shell-rename-buffer))
-      (rename-buffer title t))))
+  )
 
 (defun timfel/agent-shell--live-buffers ()
   "Return live `agent-shell' buffers sorted by buffer name."
@@ -791,21 +700,19 @@ for each one.  Return a plist for each started shell with `:title', `:task',
              do
              (let* ((title (plist-get spec :title))
                     (task (plist-get spec :task))
+                    (old-dir (plist-get spec :directory))
                     (worktree-dir
                      (or (plist-get spec :directory)
                          (timfel/agent-shell--create-worktree
                           repo-root title)))
-                    (startup
-                     (timfel/agent-shell--wait-for-session-selection
-                      (timfel/agent-shell--start-shell-in-directory worktree-dir)))
-                    (shell-buffer (plist-get startup :buffer))
-                    (queued-p nil))
-               (if (not (buffer-live-p shell-buffer))
-                   (message "Skipped agent-shell setup for %s" worktree-dir)
-                 (when (and title (not (string-empty-p title)))
-                   (timfel/agent-shell--rename-shell-buffer shell-buffer title))
-                 (if (plist-get startup :new-session-p)
-                     (timfel/agent-shell--queue-startup-requests shell-buffer task)))))))
+                    (has-transcripts
+                     (file-expand-wildcards (expand-file-name ".agent-shell/transcripts/*.md" worktree-dir)))
+                    (startup-mode (if (and has-transcripts (y-or-n-p (format "Resume session in %s" worktree-dir)))
+                                      'latest
+                                    'new)))
+               (timfel/agent-shell--start-shell-in-directory title worktree-dir startup-mode)
+               (if (eq startup-mode 'new)
+                   (timfel/agent-shell--queue-startup-requests shell-buffer task))))))
 
 (provide 'timfel-agent-shell-extensions)
 
