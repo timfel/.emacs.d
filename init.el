@@ -1503,6 +1503,9 @@ input means nil arguments."
    agent-shell-openai-authentication (agent-shell-openai-make-authentication :codex-api-key #'oca-codex-login)
    agent-shell-opencode-authentication (agent-shell-opencode-make-authentication :api-key #'oca-key)))
 
+(use-package timfel-agent-shell-unstick
+  :after agent-shell)
+
 (use-package agent-shell-attention
   :vc (:url "https://github.com/ultronozm/agent-shell-attention.el" :rev :newest)
   :ensure t
