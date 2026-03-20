@@ -18,8 +18,7 @@
                 (let ((default-directory
                        (file-name-as-directory (expand-file-name directory))))
                   (with-temp-buffer
-                    (when (zerop (process-file "git" nil t nil
-                                               "rev-parse" "--git-common-dir"))
+                    (when (zerop (process-file "git" nil t nil "rev-parse" "--git-common-dir"))
                       (let ((gitdir (string-trim (buffer-string))))
                         (if (string-empty-p gitdir)
                             directory
@@ -29,12 +28,8 @@
       (let* ((tmpdir (make-temp-file "/tmp/bcodex-session/" t))
              (common-root (git-common-root default-directory))
              (graal-dir (expand-file-name "../graal"))
-             (extra-dir-to-bind (if (file-directory-p graal-dir)
-                                    graal-dir
-                                  default-directory))
-             (graal-common-root (if (file-directory-p graal-dir)
-                                    (git-common-root graal-dir)
-                                  extra-dir-to-bind)))
+             (extra-dir-to-bind (if (file-directory-p graal-dir) graal-dir default-directory))
+             (graal-common-root (if (file-directory-p graal-dir) (git-common-root graal-dir) extra-dir-to-bind)))
         (append
          `("bwrap" "--die-with-parent" "--new-session"
            "--ro-bind" "/" "/"
@@ -42,24 +37,21 @@
            "--bind" ,common-root ,common-root
            "--bind" ,extra-dir-to-bind ,extra-dir-to-bind
            "--bind" ,graal-common-root ,graal-common-root)
-         (apply
-          #'append
-          (delq nil
-                (mapcar
-                 (lambda (path)
-                   (when (file-exists-p path)
-                     (list "--bind" path path)))
-                 (list (expand-file-name "~/dev/mx")
-                       (expand-file-name "~/dev/graal")
-                       (expand-file-name "~/dev/graalpython")
-                       (expand-file-name "~/dev/graal-enterprise")
-                       (expand-file-name "~/.cache")
-                       (expand-file-name "~/.mx")
-                       (expand-file-name "~/dev/.metadata")
-                       (expand-file-name "~/.eclipse")
-                       (expand-file-name "~/.codex")
-                       (expand-file-name "~/.opencode")
-                       (expand-file-name "~/.config/opencode")))))
+         (thread-last
+           (seq-map #'expand-file-name
+                    '("~/dev/mx"
+                      "~/dev/graal"
+                      "~/dev/graalpython"
+                      "~/dev/graal-enterprise"
+                      "~/.cache"
+                      "~/.mx"
+                      "~/dev/.metadata"
+                      "~/.eclipse"
+                      "~/.codex"
+                      "~/.opencode"
+                      "~/.config/opencode"))
+           (seq-filter #'file-exists-p)
+           (seq-mapcat (lambda (p) `("--bind" ,p ,p))))
          `("--proc" "/proc"
            "--dev" "/dev"
            "--tmpfs" ,timfel/cloud-storage
