@@ -127,11 +127,17 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
     (unless config
       (user-error "No preferred agent-shell config is available"))
 
-    (cl-loop for (title . task) in task-specs
+    ;; they consult it asynchronously, so we have not a chance
+    (setq agent-shell-session-strategy 'latest)
+
+    (cl-loop for (title-or-dir . task) in task-specs
              do
-             (let* ((title-is-dir (file-name-absolute-p title))
-                    (title (if title-is-dir (file-name-base title) title))
-                    (worktree-dir (if title-is-dir title
+             (let* ((title-is-dir (file-name-absolute-p title-or-dir))
+                    (title (if title-is-dir
+                               (string-join (last (split-string (directory-file-name title-or-dir) "/" t) 2) "-")
+                             title-or-dir))
+                    (worktree-dir (if title-is-dir
+                                      title-or-dir
                                     (timfel/agent-shell--worktrees-create repo-root title)))
                     (config (copy-alist config))
                     (default-directory worktree-dir)
@@ -139,11 +145,24 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                                                       (file-name-parent-directory (funcall agent-shell-transcript-file-path-function))
                                                       nil "\\.md$"))))
                (setf (alist-get :buffer-name config) (concat title " agent"))
-               (if-let ((shell-buffer (agent-shell-start :config config)))
-                   (when (and task (not (string-blank-p task)) (not prev-transcripts))
-                     (with-current-buffer shell-buffer
-                       (agent-shell-queue-request timfel/agent-shell-planning-request)
-                       (agent-shell-queue-request task))))))))
+               (when-let ((shell-buffer (agent-shell-start :config config)))
+                 (shell-maker-set-buffer-name shell-buffer (alist-get :buffer-name config))
+                 (with-current-buffer shell-buffer
+                   (setq-local timfel/agent-shell-worktree-parent (file-name-parent-directory worktree-dir)))
+                 (when (and task (not (string-blank-p task)) (not prev-transcripts))
+                   (with-current-buffer shell-buffer
+                     (agent-shell-queue-request timfel/agent-shell-planning-request)
+                     (agent-shell-queue-request task))))))))
+
+(defun timfel/agent-shell-cleanup-worktree ()
+  (interactive)
+  (let ((worktree-parent nil))
+    (when (boundp 'timfel/agent-shell-worktree-parent)
+      (setq worktree-parent timfel/agent-shell-worktree-parent)
+      (kill-buffer))
+    (if (and worktree-parent
+             (yes-or-no-p (format "Delete %s? " worktree-parent)))
+        (delete-directory worktree-parent t nil))))
 
 (provide 'timfel-agent-shell-fanout)
 
