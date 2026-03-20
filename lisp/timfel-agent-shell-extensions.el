@@ -7,6 +7,7 @@
 ;;; Code:
 
 (require 'dired)
+(require 'subr-x)
 (require 'timfel-agent-shell-bwrap)
 (require 'timfel-agent-shell-fanout)
 (require 'timfel-agent-shell-recovery)
@@ -18,18 +19,15 @@
   (interactive)
   (unless (derived-mode-p 'dired-mode)
     (user-error "Current buffer is not a Dired buffer"))
-  (timfel/agent-shell-fan-out-worktrees
-   (mapcar
-    (lambda (directory)
-      (list :directory directory))
-    (let ((directories
-           (delete-dups
-            (mapcar (lambda (path)
-                      (file-name-as-directory (expand-file-name path)))
-                    (dired-get-marked-files nil nil #'file-directory-p)))))
-      (unless directories
-        (user-error "No marked directories in %s" (buffer-name)))
-      directories))))
+  (let ((directories
+         (thread-last
+           (dired-get-marked-files nil nil #'file-directory-p)
+           (seq-map #'expand-file-name)
+           (seq-map #'file-name-as-directory)
+           (delete-dups))))
+    (unless directories
+      (user-error "No marked directories in %s" (buffer-name)))
+    (timfel/agent-shell-fan-out-worktrees directories)))
 
 (provide 'timfel-agent-shell-extensions)
 
