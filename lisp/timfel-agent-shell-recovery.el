@@ -7,6 +7,7 @@
 ;;; Code:
 
 (require 'agent-shell)
+(require 'seq)
 
 (defvar timfel/agent-shell-recovery--live-set-inhibit-save nil)
 (defconst timfel/agent-shell-recovery--state-file
