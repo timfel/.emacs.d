@@ -1467,7 +1467,7 @@ input means nil arguments."
   :custom
   (agent-shell-header-style 'text)
   (agent-shell-buffer-name-format (lambda (_agent-name project-name) (format "%s agent" project-name)))
-  (agent-shell-session-strategy 'prompt)
+  (agent-shell-session-strategy 'latest)
   (agent-shell-highlight-blocks nil)
   (agent-shell-prefer-viewport-interaction nil)
   (agent-shell-preferred-agent-config 'codex)

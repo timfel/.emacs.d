@@ -41,6 +41,8 @@ When called interactively, reopens each directory saved in
             (let ((default-directory directory)
                   (agent-shell-session-strategy 'latest))
               (call-interactively #'agent-shell)))
+          (message "Recovering ...")
+          (sit-for 1)
           (setq restored (1+ restored)))))
     (timfel/agent-shell-recovery--update-live-set)
     (message "Recovered %d agent-shell director%s"
