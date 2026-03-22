@@ -131,6 +131,7 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
     (setq agent-shell-session-strategy 'latest)
 
     (cl-loop for (title-or-dir . task) in task-specs
+             for i from 3 by 3
              do
              (let* ((title-is-dir (file-name-absolute-p title-or-dir))
                     (title (if title-is-dir
@@ -144,15 +145,38 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                     (prev-transcripts (ignore-errors (directory-files
                                                       (file-name-parent-directory (funcall agent-shell-transcript-file-path-function))
                                                       nil "\\.md$"))))
-               (setf (alist-get :buffer-name config) (concat title " agent"))
-               (when-let ((shell-buffer (agent-shell-start :config config)))
-                 (shell-maker-set-buffer-name shell-buffer (alist-get :buffer-name config))
-                 (with-current-buffer shell-buffer
-                   (setq-local timfel/agent-shell-worktree-parent (file-name-parent-directory worktree-dir)))
-                 (when (and task (not (string-blank-p task)) (not prev-transcripts))
-                   (with-current-buffer shell-buffer
-                     (agent-shell-queue-request timfel/agent-shell-planning-request)
-                     (agent-shell-queue-request task))))))))
+
+               (run-with-timer
+                i nil
+                (lambda (worktree-dir config task)
+                  (let ((default-directory worktree-dir))
+                    (when-let ((shell-buffer (agent-shell-start :config config)))
+                      ;; apply the dir-local variables and ensure we persist the worktree-parent
+                      (run-with-timer
+                       3 nil
+                       (lambda (buffer worktree-parent)
+                         (with-current-buffer buffer
+                           (hack-dir-local-variables-non-file-buffer)
+                           (if (not (local-variable-p 'timfel/agent-shell-worktree-parent))
+                               (add-dir-local-variable
+                                'agent-shell-mode 'timfel/agent-shell-worktree-parent
+                                worktree-parent
+                                (expand-file-name dir-locals-file worktree-parent)))))
+                       shell-buffer
+                       (file-name-parent-directory worktree-dir))
+
+                      ;; if there's a task, enqueue it after a little random backoff time
+                      (when task
+                        (run-with-timer
+                         (+ 3 (random 4)) nil
+                         (lambda (buffer)
+                           (with-current-buffer buffer
+                             (agent-shell-queue-request timfel/agent-shell-planning-request)
+                             (agent-shell-queue-request task)))
+                         shell-buffer)))))
+                worktree-dir
+                config
+                (if (or (string-blank-p task) prev-transcripts) nil task))))))
 
 (defun timfel/agent-shell-cleanup-worktree ()
   (interactive)
