@@ -44,12 +44,12 @@ When called interactively, reopens each directory saved in
           (message "Recovering ...")
           (sit-for 1)
           (setq restored (1+ restored)))))
-    (timfel/agent-shell-recovery--update-live-set)
+    (timfel/agent-shell-recovery-track-live-set)
     (message "Recovered %d agent-shell director%s"
              restored
              (if (= restored 1) "y" "ies"))))
 
-(defun timfel/agent-shell-recovery--update-live-set (&optional omit-buffer)
+(defun timfel/agent-shell-recovery-track-live-set (&optional omit-buffer)
   "Save the current live set of agent shells.
 
 When called inside an agent-shell, install a buffer-local
@@ -57,7 +57,7 @@ When called inside an agent-shell, install a buffer-local
 being killed."
   (when (derived-mode-p 'agent-shell-mode)
     (add-hook 'kill-buffer-hook
-              (lambda () (timfel/agent-shell-recovery--update-live-set (current-buffer)))
+              (lambda () (timfel/agent-shell-recovery-track-live-set (current-buffer)))
               nil t))
   (unless timfel/agent-shell-recovery--live-set-inhibit-save
     (let ((directories

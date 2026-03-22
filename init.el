@@ -123,7 +123,8 @@
              timfel/agent-shell-recovery-recover-live-set
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-tile-buffers-grid)
-  :hook (agent-shell-mode . timfel/agent-shell-recovery--update-live-set)
+  :hook ((agent-shell-mode . timfel/agent-shell-recovery-track-live-set)
+         (agent-shell-mode . timfel/agent-shell-retry-on-hitting-rate-limit))
   :bind (("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
          :map dired-mode-map
          ("C-x a i" . timfel/dired-agent-shell-marked-directories))
@@ -1465,6 +1466,7 @@ input means nil arguments."
   :commands agent-shell
   :pin melpa
   :custom
+  (agent-shell-busy-indicator-frames 'dots-round)
   (agent-shell-header-style 'text)
   (agent-shell-buffer-name-format (lambda (_agent-name project-name) (format "%s agent" project-name)))
   (agent-shell-session-strategy 'latest)
