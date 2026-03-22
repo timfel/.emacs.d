@@ -30,7 +30,8 @@ When called interactively, reopens each directory saved in
       (user-error "No saved live agent-shell set"))
     (let ((timfel/agent-shell-recovery--live-set-inhibit-save t))
       (dolist (directory directories)
-        (when (y-or-n-p (format "Restore agent-shell for %s? " directory))
+        (when (and (file-directory-p directory)
+                   (y-or-n-p (format "Restore agent-shell for %s? " directory)))
           (unless (seq-some
                    (lambda (buffer)
                      (with-current-buffer buffer
@@ -39,11 +40,15 @@ When called interactively, reopens each directory saved in
                         (file-name-as-directory (expand-file-name directory)))))
                    (agent-shell-buffers))
             (let ((default-directory directory)
+                  (title (concat (string-join
+                                  (last (split-string (directory-file-name directory) "/" t) 2)
+                                  "-")
+                                 " agent"))
                   (agent-shell-session-strategy 'latest))
-              (call-interactively #'agent-shell)))
-          (message "Recovering ...")
-          (sit-for 1)
-          (setq restored (1+ restored)))))
+              (when-let ((shell-buffer (agent-shell-start :config (agent-shell--resolve-preferred-config))))
+                (sit-for 3)
+                (shell-maker-set-buffer-name shell-buffer title)
+                (setq restored (1+ restored))))))))
     (timfel/agent-shell-recovery-track-live-set)
     (message "Recovered %d agent-shell director%s"
              restored
