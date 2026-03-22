@@ -181,7 +181,8 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
 (defun timfel/agent-shell-cleanup-worktree ()
   (interactive)
   (let ((worktree-parent nil))
-    (when (boundp 'timfel/agent-shell-worktree-parent)
+    (when (or (boundp 'timfel/agent-shell-worktree-parent)
+              (local-variable-p 'timfel/agent-shell-worktree-parent))
       (setq worktree-parent timfel/agent-shell-worktree-parent)
       (kill-buffer))
     (if (and worktree-parent
