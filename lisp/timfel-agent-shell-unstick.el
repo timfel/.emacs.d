@@ -192,58 +192,18 @@
 (defun timfel/agent-shell-restart-and-retry-buffer ()
   "Kill current shell, start a fresh one with the same session id, retry prompt."
   (interactive)
-  (unless (derived-mode-p 'agent-shell-mode)
-    (user-error "Not in an agent-shell buffer"))
-  (let* ((old-buffer (current-buffer))
-         (old-name (buffer-name old-buffer))
-         (config (map-elt agent-shell--state :agent-config))
-         (session-id (map-nested-elt agent-shell--state '(:session :id)))
-         (prompt (timfel/agent-shell-unstick--recoverable-prompt))
-         (cwd default-directory)
-         (new-buffer nil)
-         (token nil))
-    (unless session-id
-      (user-error "No active session id found for %s" old-name))
-    (unless (and prompt (not (string-empty-p prompt)))
-      (user-error "No recoverable prompt found for %s" old-name))
-    (timfel/agent-shell-unstick--drop-buffer-retries old-buffer)
-    (let ((kill-buffer-query-functions nil))
-      (kill-buffer old-buffer))
-    (let ((default-directory cwd))
-      (setq new-buffer
-            (agent-shell--start :config config
-                                :session-id session-id
-                                :new-session t
-                                :no-focus t)))
-    (unless (buffer-live-p new-buffer)
-      (error "Failed to start replacement shell for %s" old-name))
-    (setq token
-          (agent-shell-subscribe-to
-           :shell-buffer new-buffer
-           :event 'prompt-ready
-           :on-event
-           (lambda (_event)
-             (when (buffer-live-p new-buffer)
-               (with-current-buffer new-buffer
-                 (agent-shell-unsubscribe :subscription token)
-                 (rename-buffer old-name t)
-                 (setq-local shell-maker--buffer-name-override (buffer-name))
-                 (setq timfel/agent-shell-unstick--last-prompt prompt
-                       shell-maker--busy t)
-                 (agent-shell--handle :command prompt :shell-buffer (current-buffer))
-                 (agent-shell--display-buffer (current-buffer)))))))
-    (message "Restarted %s, resuming session %s, waiting to retry prompt"
-             old-name session-id)))
-
-(when (fboundp 'timfel/agent-shell-unstick--subscribe-errors-advice)
-  (advice-remove 'agent-shell--subscribe-to-client-events
-                 #'timfel/agent-shell-unstick--subscribe-errors-advice))
-(when (fboundp 'timfel/agent-shell-unstick--finalize-session-init-advice)
-  (advice-remove 'agent-shell--finalize-session-init
-                 #'timfel/agent-shell-unstick--finalize-session-init-advice))
-
-(advice-remove 'agent-shell--send-command #'timfel/agent-shell-unstick--send-command-advice)
-(advice-remove 'agent-shell--make-error-handler #'timfel/agent-shell-unstick--make-error-handler-advice)
+  (if-let* ((old-name (buffer-name))
+            (prompt (timfel/agent-shell-unstick--recoverable-prompt))
+            (window-for-new-shell (agent-shell-reload))
+            (shell-buffer (window-buffer window-for-new-shell)))
+      (with-current-buffer shell-buffer
+        (unless (derived-mode-p 'agent-shell-mode)
+          (user-error "Error when reloading, not in an agent-shell buffer"))
+        (run-with-timer 1 nil
+                        (lambda (buffer)
+                          (shell-maker-set-buffer-name buffer old-name)
+                          (with-current-buffer buffer
+                            (agent-shell-queue-request prompt)))))))
 
 (advice-add 'agent-shell--send-command :around #'timfel/agent-shell-unstick--send-command-advice)
 (advice-add 'agent-shell--make-error-handler :around #'timfel/agent-shell-unstick--make-error-handler-advice)
