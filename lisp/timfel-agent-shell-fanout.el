@@ -157,11 +157,12 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                        (lambda (buffer worktree-parent)
                          (with-current-buffer buffer
                            (hack-dir-local-variables-non-file-buffer)
-                           (if (not (local-variable-p 'timfel/agent-shell-worktree-parent))
-                               (add-dir-local-variable
-                                'agent-shell-mode 'timfel/agent-shell-worktree-parent
-                                worktree-parent
-                                (expand-file-name dir-locals-file worktree-parent)))))
+                           (when (not (local-variable-p 'timfel/agent-shell-worktree-parent))
+                             (add-dir-local-variable
+                              'agent-shell-mode 'timfel/agent-shell-worktree-parent
+                              worktree-parent
+                              (expand-file-name dir-locals-file worktree-parent))
+                             (switch-to-buffer buffer))))
                        shell-buffer
                        (file-name-parent-directory worktree-dir))
 
