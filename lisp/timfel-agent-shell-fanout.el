@@ -187,10 +187,10 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
     (when (or (boundp 'timfel/agent-shell-worktree-parent)
               (local-variable-p 'timfel/agent-shell-worktree-parent))
       (setq worktree-parent timfel/agent-shell-worktree-parent))
-    (if (and worktree-parent
-             (yes-or-no-p (format "Delete %s? " worktree-parent)))
-        (kill-buffer)
-        (delete-directory worktree-parent t nil))))
+    (when (and worktree-parent
+               (yes-or-no-p (format "Delete %s? " worktree-parent)))
+      (kill-buffer)
+      (delete-directory worktree-parent t nil))))
 
 (provide 'timfel-agent-shell-fanout)
 
