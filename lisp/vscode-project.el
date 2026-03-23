@@ -11,6 +11,8 @@
 (require 'json)
 (require 'subr-x)
 
+(declare-function eglot-managed-p "eglot")
+
 (defvar vscode-project--cache (make-hash-table :test #'equal)
   "Cache keyed by VC root.
 
@@ -253,7 +255,8 @@ This is a troubleshooting helper for `project-try-vscode-project'."
           (remove-hook 'kill-buffer-hook #'vscode-project--remove-eglot-buffer-hook t)
           (vscode-project--remove-eglot-buffer-hook)))))
 
-(add-hook 'eglot-managed-mode-hook #'vscode-project--track-eglot-buffer)
+(with-eval-after-load 'eglot
+  (add-hook 'eglot-managed-mode-hook #'vscode-project--track-eglot-buffer))
 
 (add-hook 'project-find-functions #'project-try-vscode-project)
 

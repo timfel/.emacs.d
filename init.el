@@ -956,7 +956,7 @@
   :ensure t
   :defines (vterm-mode-map vterm--process)
   :commands (vterm)
-  :unless (eq system-type 'windows-nt)
+  :unless (memq system-type '(windows-nt android))
   :bind (("<f12>" . (lambda ()
                       (interactive)
                       (if-let ((w (get-window-with-predicate (lambda (w) (string-prefix-p "*vterm" (buffer-name (window-buffer w)))))))
@@ -1004,7 +1004,7 @@
   (vterm-max-scrollback 40000))
 
 (use-package eshell
-  :if (eq system-type 'windows-nt)
+  :if (memq system-type '(windows-nt android))
   :after exec-path-from-shell
   :defer t
   :bind (("<f12>" . (lambda ()
@@ -1664,6 +1664,25 @@ input means nil arguments."
   (jira-api-version 2)
   (jira-debug nil))
 
+(use-package org-social
+  :ensure t
+  :commands org-social-timeline
+  :custom
+  (org-social-relay "https://relay.org-social.org/"
+   org-social-my-public-url "https://host.org-social.org/timfelgentreff/social.org"))
+
+(use-package elfeed
+  :ensure t
+  :bind (:map elfeed-search-mode-map
+         ("g" . elfeed-update)
+         ("<mouse-1>" . elfeed-search-show-entry))
+  :commands elfeed
+  :custom
+  (elfeed-feeds
+   '("https://www.indieretronews.com/feeds/posts/default?alt=rss"
+     "https://xkcd.com/rss.xml"
+     "https://www.osnews.com/feed/")))
+
 (use-package custom
   :defines (wl-copy-process)
   :config
@@ -1695,6 +1714,15 @@ input means nil arguments."
 				   (set-face-attribute 'default nil :family "Consolas" :height 105)
                                  (if (eq system-type 'android)
                                      (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120)))))))
+
+  (when (eq system-type 'android)
+    ;; we do not have permissions above our own and some shared folders in
+    ;; emacs on android
+    (setq locate-dominating-stop-dir-regexp
+          (concat locate-dominating-stop-dir-regexp
+                  "\\|\\`/data/data/org.gnu.emacs/\\'"
+                  "\\|\\`/data/data/com.termux/\\'"
+                  "\\|\\`/content/storage/\\'")))
 
   (when (eq system-type 'gnu/linux)
     (if (or (eq window-system 'pgtk)
