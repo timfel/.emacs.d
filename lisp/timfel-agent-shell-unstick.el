@@ -41,8 +41,9 @@
   "Restart shell with the same session id then re-send last prompt."
   (interactive "P")
   (if (or (shell-maker-busy) force)
-      (if-let* ((file agent-shell--transcript-file)
-                (prompt (when (file-readable-p file)
+      (if-let* ((agent-directory default-directory)
+                (file agent-shell--transcript-file)
+                (prompt (when (and (file-readable-p file) (shell-maker-busy))
                           (with-temp-buffer
                             (insert-file-contents file)
                             (goto-char (point-max))
@@ -55,20 +56,21 @@
                                   (if (re-search-forward "\n\n## " nil t)
                                       (buffer-substring-no-properties start (match-beginning 0))
                                     (buffer-substring-no-properties start (point-max)))))))))))
-          (if-let* ((old-name (buffer-name))
-                    (window-for-new-shell (agent-shell-reload))
-                    (shell-buffer (window-buffer window-for-new-shell)))
-              (with-current-buffer shell-buffer
-                (unless (derived-mode-p 'agent-shell-mode)
-                  (user-error "Error when reloading, not in an agent-shell buffer"))
-                (run-with-timer 4 nil
-                                (lambda (buffer)
-                                  (shell-maker-set-buffer-name buffer old-name)
-                                  (with-current-buffer buffer
-                                    (agent-shell-queue-request prompt)))
-                                shell-buffer)))
-        (user-error "Could not find last prompt"))
-    (message "This agent-shell is not busy, use prefix to force reloading")))
+          (let ((default-directory agent-directory))
+            (if-let* ((old-name (buffer-name))
+                      (window-for-new-shell (agent-shell-reload))
+                      (shell-buffer (window-buffer window-for-new-shell)))
+                (with-current-buffer shell-buffer
+                  (unless (derived-mode-p 'agent-shell-mode)
+                    (user-error "Error when reloading, not in an agent-shell buffer"))
+                  (run-with-timer 4 nil
+                                  (lambda (buffer)
+                                    (shell-maker-set-buffer-name buffer old-name)
+                                    (with-current-buffer buffer
+                                      (agent-shell-queue-request prompt)))
+                                  shell-buffer)))
+            (user-error "Could not find last prompt"))
+        (message "This agent-shell is not busy, use prefix to force reloading"))))
 
 (provide 'timfel-agent-shell-unstick)
 
