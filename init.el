@@ -120,6 +120,7 @@
 
 (use-package timfel-agent-shell-extensions
   :commands (timfel/agent-shell-fan-out-worktrees
+             timfel/magit-diff-comment-region-with-agent-shell
              timfel/agent-shell-recovery-recover-live-set
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-tile-buffers-grid)
@@ -521,7 +522,9 @@
 
 (use-package magit
   :unless (eq system-type 'windows-nt)
-  :bind ("C-x C-z" . magit-status)
+  :bind (("C-x C-z" . magit-status)
+         :map magit-diff-mode-map
+         ("C-c c" . timfel/magit-diff-comment-region-with-agent-shell))
   :ensure t
   :custom
   (magit-auto-revert-tracked-only t)
