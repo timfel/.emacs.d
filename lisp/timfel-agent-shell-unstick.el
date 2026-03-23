@@ -65,7 +65,8 @@
                                 (lambda (buffer)
                                   (shell-maker-set-buffer-name buffer old-name)
                                   (with-current-buffer buffer
-                                    (agent-shell-queue-request prompt))))))
+                                    (agent-shell-queue-request prompt)))
+                                shell-buffer)))
         (user-error "Could not find last prompt"))
     (message "This agent-shell is not busy, use prefix to force reloading")))
 
