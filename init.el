@@ -131,10 +131,10 @@
              timfel/agent-shell-tile-buffers-grid)
   :hook ((agent-shell-mode . timfel/agent-shell-recovery-track-live-set)
          (agent-shell-mode . timfel/agent-shell-retry-on-hitting-rate-limit)
-         (agent-shell-mode . hack-dir-local-variables-non-file-buffer))
-  :bind (("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
-         :map dired-mode-map
-         ("C-x a i" . timfel/dired-agent-shell-marked-directories))
+         (agent-shell-mode . hack-dir-local-variables-non-file-buffer)
+         (dired-mode . (lambda ()
+                         (keymap-set dired-mode-map "C-x a i" #'timfel/dired-agent-shell-marked-directories))))
+  :bind (("C-x a t" . timfel/agent-shell-tile-buffers-grid))
   :after timfel)
 
 (use-package timfel-jira-extensions
@@ -364,7 +364,7 @@
           (imenu (styles flex))
           (buffer (styles initials flex basic))
           (command (styles partial-completion))
-          (file (styles partial-completion)))))
+          (file (styles flex partial-completion)))))
 
 (use-package completion-preview
   :disabled
