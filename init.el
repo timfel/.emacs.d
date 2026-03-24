@@ -319,37 +319,43 @@
   :functions (icomplete-backward-completions icomplete-force-complete
               icomplete-force-complete-and-exit icomplete-forward-completions
               icomplete-minibuffer-setup)
-  :custom
-  (icomplete-in-buffer t)
-  (icomplete-hide-common-prefix t)
   :bind (:map icomplete-minibuffer-map
-              ("RET" . #'icomplete-force-complete-and-exit)
-              ("TAB" . #'icomplete-force-complete)
-              ("<left>" . #'icomplete-forward-completions)
-              ("<right>" . #'icomplete-backward-completions)
+              ("RET" . #'icomplete-fido-ret)
               ("C-c C-d" . (lambda ()
                              (interactive)
-                             (message "cat=%S table=%S pred=%S"
+                             (message "category=%S"
                                       (completion-metadata-get
                                        (completion-metadata (minibuffer-contents)
                                                             minibuffer-completion-table
                                                             minibuffer-completion-predicate)
-                                       'category)
-                                      minibuffer-completion-table
-                                      minibuffer-completion-predicate))))
+                                       'category)))))
+  :custom
+  (icomplete-in-buffer t)
+  (icomplete-hide-common-prefix t)
+  (icomplete-tidy-shadowed-file-names t)
+  (icomplete-show-matches-on-no-input t)
+  (completion-flex-nospace nil)
   :config
-  (setq completion-ignore-case t)
+  (setq completion-ignore-case t
+        read-buffer-completion-ignore-case t
+        read-file-name-completion-ignore-case t)
   (icomplete-mode t)
-  (fido-mode t)
   ;; If I were to use normal ido-mode, disable icomplete in the minibuffer
   ;; (remove-hook 'minibuffer-setup-hook #'icomplete-minibuffer-setup)
   ;; i like completion to be local
   (advice-add 'completion-at-point :after (lambda (&rest _args) (unless (minibuffer-window-active-p (get-buffer-window)) (minibuffer-hide-completions))))
-  (mapc (lambda (override) (map-put! completion-category-overrides (car override) (cdr override)))
+  (setq completion-category-overrides nil)
+  (mapc (lambda (override) (add-to-list 'completion-category-overrides override))
         '((project-file (styles substring))
           (imenu (styles flex))
-          (command (styles initials substring))
-          (file (styles substring)))))
+          (buffer (styles initials flex basic))
+          (command (styles partial-completion))
+          (file (styles partial-completion)))))
+
+(use-package completion-preview
+  :disabled
+  :ensure nil
+  :hook (prog-mode . completion-preview-mode))
 
 (use-package grep
   :defines (find-name-arg)
