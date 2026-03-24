@@ -53,7 +53,12 @@
 
   :custom
   (browse-url-generic-program (or (executable-find "wslview") "xdg-open"))
-  (browse-url-browser-function (if (eq system-type 'windows-nt) 'browse-url-default-browser 'browse-url-generic))
+  (browse-url-browser-function (lambda (&rest args)
+                                 (if (y-or-n-p "Browse with EWW? ")
+                                     (apply #'eww-browse-url args)
+                                   (if (eq system-type 'windows-nt)
+                                       (apply #'browse-url-default-browser args)
+                                     (apply #'browse-url-generic args)))))
   (custom-file (locate-user-emacs-file "emacs-custom.el"))
   (confirm-kill-emacs 'yes-or-no-p)
   (visible-bell nil)
@@ -316,8 +321,8 @@
   (add-hook 'eldoc-display-functions #'eldoc-display-in-echo-area))
 
 (use-package icomplete
-  :functions (icomplete-backward-completions icomplete-force-complete
-              icomplete-force-complete-and-exit icomplete-forward-completions
+  :functions (icomplete-fido-delete-char
+              icomplete-fido-ret
               icomplete-minibuffer-setup)
   :bind (:map icomplete-minibuffer-map
               ("RET" . #'icomplete-fido-ret)
