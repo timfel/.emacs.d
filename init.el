@@ -345,9 +345,10 @@
   ;; (remove-hook 'minibuffer-setup-hook #'icomplete-minibuffer-setup)
   ;; i like completion to be local
   (advice-add 'completion-at-point :after (lambda (&rest _args) (unless (minibuffer-window-active-p (get-buffer-window)) (minibuffer-hide-completions))))
-  (mapc (lambda (override) (add-to-list 'completion-category-overrides override))
+  (mapc (lambda (override) (map-put! completion-category-overrides (car override) (cdr override)))
         '((project-file (styles substring))
           (imenu (styles flex))
+          (command (styles initials substring))
           (file (styles substring)))))
 
 (use-package grep
