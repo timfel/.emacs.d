@@ -44,10 +44,14 @@
 
 (defun timfel/ci-dashboard--normalize-pr-title (title)
   "Normalize dashboard heading TITLE into a pull request title."
-  (let ((title (string-trim title)))
-    (setq title (string-remove-prefix ">" title))
-    (setq title (replace-regexp-in-string " ([0-9]+/[0-9]+/[0-9]+)\\'" "" title))
-    (string-trim title)))
+  (thread-last
+    title
+    (string-trim)
+    (string-remove-prefix ">")
+    (replace-regexp-in-string " ([0-9]+/[0-9]+/[0-9]+)\\'" "")
+    (replace-regexp-in-string " " "_")
+    (replace-regexp-in-string "_+" "_")
+    (string-trim)))
 
 (defun timfel/ci-dashboard--pr-title (pr &optional section)
   "Return the pull request title from PR or SECTION."
@@ -59,14 +63,17 @@
            (timfel/ci-dashboard--section-heading section)))
         (user-error "Pull request at point is missing a title"))))
 
-(defun timfel/ci-dashboard--task-title (pr-title)
+(defun timfel/ci-dashboard--task-title (pr-title pr-url)
   "Return a compact task title derived from PR-TITLE."
-  (or (when (string-match timfel/ci-dashboard--jira-key-regexp pr-title)
-        (match-string 0 pr-title))
-      (let ((title (string-trim (replace-regexp-in-string "\\s-+" " " pr-title))))
-        (if (> (length title) 48)
-            (concat (substring title 0 48) "...")
-          title))))
+  (let ((pr-id (replace-regexp-in-string ".*/" "" pr-url)))
+    (concat
+     (or (when (string-match timfel/ci-dashboard--jira-key-regexp pr-title)
+           (match-string 0 pr-title))
+         (let ((title (string-trim (replace-regexp-in-string "\\s-+" " " pr-title))))
+         (if (> (length title) 48)
+             (concat (substring title 0 48) "...")
+           title)))
+     "-PR-" pr-id)))
 
 (defun timfel/ci-dashboard--pr-url (pr)
   "Return the browser URL for pull request PR."
@@ -91,7 +98,7 @@
   (let* ((pr-title (timfel/ci-dashboard--pr-title pr section))
          (pr-url (timfel/ci-dashboard--pr-url pr)))
     (cons
-     (timfel/ci-dashboard--task-title pr-title)
+     (timfel/ci-dashboard--task-title pr-title pr-url)
      (format
       (concat
        "Review the CI gates on this pull request.\n\n"
@@ -110,8 +117,8 @@
          (job-url (or (alist-get 'url job)
                       (user-error "Job at point is missing a URL"))))
     (cons
-     (format "%s %s"
-             (timfel/ci-dashboard--task-title pr-title)
+     (format "%s-%s"
+             (timfel/ci-dashboard--task-title pr-title pr-url)
              job-key)
      (format
       (concat
