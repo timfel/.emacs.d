@@ -321,6 +321,7 @@
               icomplete-minibuffer-setup)
   :bind (:map icomplete-minibuffer-map
               ("RET" . #'icomplete-fido-ret)
+              ("C-d" . #'icomplete-fido-delete-char)
               ("C-c C-d" . (lambda ()
                              (interactive)
                              (message "category=%S"
