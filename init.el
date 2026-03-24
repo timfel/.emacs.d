@@ -326,16 +326,29 @@
               ("RET" . #'icomplete-force-complete-and-exit)
               ("TAB" . #'icomplete-force-complete)
               ("<left>" . #'icomplete-forward-completions)
-              ("<right>" . #'icomplete-backward-completions))
+              ("<right>" . #'icomplete-backward-completions)
+              ("C-c C-d" . (lambda ()
+                             (interactive)
+                             (message "cat=%S table=%S pred=%S"
+                                      (completion-metadata-get
+                                       (completion-metadata (minibuffer-contents)
+                                                            minibuffer-completion-table
+                                                            minibuffer-completion-predicate)
+                                       'category)
+                                      minibuffer-completion-table
+                                      minibuffer-completion-predicate))))
   :config
   (setq completion-ignore-case t)
   (icomplete-mode t)
-  ;; I don't like it in the minibuffer
-  (remove-hook 'minibuffer-setup-hook #'icomplete-minibuffer-setup)
+  (fido-mode t)
+  ;; If I were to use normal ido-mode, disable icomplete in the minibuffer
+  ;; (remove-hook 'minibuffer-setup-hook #'icomplete-minibuffer-setup)
   ;; i like completion to be local
   (advice-add 'completion-at-point :after (lambda (&rest _args) (unless (minibuffer-window-active-p (get-buffer-window)) (minibuffer-hide-completions))))
-  (add-to-list 'completion-category-overrides '(project-file (styles substring)))
-  (add-to-list 'completion-category-overrides '(imenu (styles flex))))
+  (mapc (lambda (override) (add-to-list 'completion-category-overrides override))
+        '((project-file (styles substring))
+          (imenu (styles flex))
+          (file (styles substring)))))
 
 (use-package grep
   :defines (find-name-arg)
@@ -704,6 +717,7 @@
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
 
 (use-package ido
+  :disabled
   :functions (ido-everywhere)
   :config
   (ido-mode t)
