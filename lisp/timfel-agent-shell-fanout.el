@@ -37,7 +37,9 @@
                      (file-name-parent-directory transcript-dir))
                     "worktrees"))
          (slug (thread-last
-                 title
+                 (if (string-match "\\`[A-Z][A-Z]+-[0-9]+\\b" title) ;; looks like an issue ID?
+                     (match-string 0 title)
+                   title)
                  (downcase)
                  (replace-regexp-in-string "[^[:alnum:]]+" "-")
                  (replace-regexp-in-string "\\`-+\\|-+\\'" "")))
