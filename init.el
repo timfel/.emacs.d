@@ -323,10 +323,16 @@
 (use-package icomplete
   :functions (icomplete-fido-delete-char
               icomplete-fido-ret
-              icomplete-minibuffer-setup)
+              icomplete-fido-backward-updir
+              icomplete-minibuffer-setup
+              icomplete-force-complete)
   :bind (:map icomplete-minibuffer-map
               ("RET" . #'icomplete-fido-ret)
+              ("TAB" . #'icomplete-force-complete)
+              ("DEL" . #'icomplete-fido-backward-updir)
               ("C-d" . #'icomplete-fido-delete-char)
+              ("<right>" . #'icomplete-forward-completions)
+              ("<left>" . #'icomplete-backward-completions)
               ("C-c C-d" . (lambda ()
                              (interactive)
                              (message "category=%S"
