@@ -162,8 +162,9 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                               'agent-shell-mode 'timfel/agent-shell-worktree-parent
                               worktree-parent
                               (expand-file-name dir-locals-file worktree-parent))
-                             (if (string-suffix-p dir-locals-file (buffer-file-name))
-                                 (save-buffer)) ;; save .dir-locals.el if it got created now
+                             (when (string-suffix-p dir-locals-file (buffer-file-name))
+                               (save-buffer)
+                               (kill-buffer)) ;; save .dir-locals.el if it got created/selected now
                              (switch-to-buffer buffer))))
                        shell-buffer
                        (file-name-parent-directory worktree-dir))

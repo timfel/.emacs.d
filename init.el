@@ -125,7 +125,8 @@
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-tile-buffers-grid)
   :hook ((agent-shell-mode . timfel/agent-shell-recovery-track-live-set)
-         (agent-shell-mode . timfel/agent-shell-retry-on-hitting-rate-limit))
+         (agent-shell-mode . timfel/agent-shell-retry-on-hitting-rate-limit)
+         (agent-shell-mode . hack-dir-local-variables-non-file-buffer))
   :bind (("C-x a t" . #'timfel/agent-shell-tile-buffers-grid)
          :map dired-mode-map
          ("C-x a i" . timfel/dired-agent-shell-marked-directories))
