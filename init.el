@@ -324,6 +324,8 @@
   :functions (icomplete-fido-delete-char
               icomplete-fido-ret
               icomplete-fido-backward-updir
+              icomplete-forward-completions
+              icomplete-backward-completions
               icomplete-minibuffer-setup
               icomplete-force-complete)
   :bind (:map icomplete-minibuffer-map
@@ -766,6 +768,13 @@
   (global-set-key (kbd "M-[ 1 ; 5 d") (kbd "C-<left>"))
   (global-set-key (kbd "M-[ 1 ; 5 c") (kbd "C-<right>"))
   (term-keys-mode t))
+
+(use-package sixel-graphics
+  :ensure t
+  :unless (display-graphic-p)
+  :vc (:url "https://github.com/timfel/sixel-graphics.el" :branch "main" :rev :newest)
+  :config
+  (sixel-graphics-mode t))
 
 (use-package cmake-mode
   :ensure t
