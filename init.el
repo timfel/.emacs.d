@@ -1237,6 +1237,7 @@ input means nil arguments."
   (lsp-report-if-no-buffer t)
   (lsp-enable-snippet t)
   (lsp-enable-xref t)
+  (lsp-diagnostics-provider :flymake)
   (lsp-completion-enable t)
   (lsp-completion-filter-on-incomplete nil)
   (lsp-completion-show-detail t)
