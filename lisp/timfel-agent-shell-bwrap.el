@@ -25,7 +25,7 @@
                           (file-name-directory
                            (directory-file-name
                             (expand-file-name gitdir default-directory))))))))))
-      (let* ((tmpdir (make-temp-file "/tmp/bcodex-session/" t))
+      (let* ((tmpdir (make-temp-file "/tmp/bcodex-session" t (replace-regexp-in-string "[^[:alnum:]]" "" default-directory)))
              (common-root (git-common-root default-directory))
              (graal-dir (expand-file-name "../graal"))
              (extra-dir-to-bind (if (file-directory-p graal-dir) graal-dir default-directory))
