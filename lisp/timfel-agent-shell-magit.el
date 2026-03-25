@@ -11,61 +11,29 @@
 (require 'agent-shell)
 (require 'magit-diff)
 (require 'magit-section)
+(require 'magit-mode)
 (require 'timfel-agent-shell-fanout)
-
-(defvar magit-buffer-revision nil)
-(defvar magit-buffer-revision-hash nil)
 
 (defvar timfel/agent-shell-magit-comment-history nil
   "Minibuffer history for Magit review comments sent to `agent-shell'.")
 
-(defun timfel/agent-shell-magit--matching-shell-buffers (repo-root)
-  "Return live `agent-shell' buffers whose worktree parent contains REPO-ROOT."
-  (let ((repo-root (file-name-as-directory (expand-file-name repo-root))))
-    (seq-filter
-     (lambda (buffer)
-       (if (buffer-live-p buffer)
-            (with-current-buffer buffer
-              (let ((worktree-parent
-                     (or (buffer-local-value 'timfel/agent-shell-worktree-parent buffer)
-                         default-directory)))
-                (and worktree-parent
-                     (file-in-directory-p
-                      repo-root
-                      (file-name-as-directory
-                       (expand-file-name worktree-parent))))))))
-     (agent-shell-buffers))))
-
 (defun timfel/agent-shell-magit--read-shell-buffer (repo-root)
   "Return the live `agent-shell' buffer matching REPO-ROOT."
-  (let ((buffers (timfel/agent-shell-magit--matching-shell-buffers repo-root)))
-    (cond
-     ((null buffers)
-      (user-error "No live agent-shell worktree parent contains %s" repo-root))
-     ((null (cdr buffers))
-      (car buffers))
-     (t
-      (let* ((choices
-              (mapcar
-               (lambda (buffer)
-                 (cons
-                  (format "%s  [%s]"
-                          (buffer-name buffer)
-                          (buffer-local-value 'default-directory buffer))
-                  buffer))
-               buffers))
-             (selected
-              (completing-read "Agent shell: " choices nil t nil nil
-                               (caar choices))))
-        (or (cdr (assoc selected choices))
-            (user-error "No agent-shell selected")))))))
-
-(defun timfel/agent-shell-magit--commit-sha ()
-  "Return the commit SHA for the current Magit revision diff."
-  (or magit-buffer-revision-hash
-      (and magit-buffer-revision
-           (magit-rev-parse magit-buffer-revision))
-      (user-error "This Magit diff is not locked to a single commit")))
+  (if-let* ((buffers (thread-last
+                       (agent-shell-buffers)
+                       (seq-filter #'buffer-live-p)
+                       (seq-filter (lambda (b)
+                                     (file-in-directory-p
+                                      (buffer-local-value default-directory b)
+                                      repo-root)))))
+            (choices (seq-map (lambda (buffer)
+                                (cons (format "%s  [%s]"
+                                              (buffer-name buffer)
+                                              (buffer-local-value 'default-directory buffer))
+                                      buffer))
+                              buffers)))
+      (completing-read "Agent shell: " choices nil t nil nil (caar choices))
+    (user-error "No agent-shell to send to")))
 
 (defun timfel/agent-shell-magit--selected-hunk ()
   "Return the current hunk section.
@@ -93,20 +61,17 @@ Use the active internal region when present, otherwise include the full hunk."
      (buffer-substring-no-properties (oref section start) (oref section end)))))
 
 (defun timfel/agent-shell-magit--request (repo-root commit-sha file comment patch)
-  "Format an `agent-shell' request for review feedback."
-  (format
-   (concat
-    "You are reviewing code from Magit.\n\n"
-    "Repository: %s\n"
-    "Commit SHA: %s\n"
-    "File: %s\n\n"
-    "Comment:\n%s\n\n"
-    "Diff context (includes the file and hunk header):\n"
-    "```diff\n%s```\n\n"
-    "Please address respond to this review comment. "
-    "Do NOT edit any code, unless the requested change "
-    "is specifically ONLY to make a small code change.")
-   repo-root commit-sha file comment patch))
+  (concat
+   "You are reviewing code.\n"
+   "Repository: " repo-root "\n"
+   "Commit-ish: " commit-sha "\n"
+   "File: " file "\n\n"
+   comment
+   "\n\n"
+   "```diff\n" patch "```\n\n"
+   "Please address respond to this review comment. "
+   "Do NOT edit any code, unless the requested change "
+   "is specifically ONLY to make a small code change."))
 
 ;;;###autoload
 (defun timfel/magit-diff-comment-region-with-agent-shell (comment)
@@ -115,14 +80,13 @@ Use the active internal region when present, otherwise include the full hunk."
    (list
     (read-from-minibuffer "Agent review comment: " nil nil nil
                           'timfel/agent-shell-magit-comment-history)))
-  (let* ((section (timfel/agent-shell-magit--selected-hunk))
-         (repo-root (magit-toplevel))
-         (shell-buffer (timfel/agent-shell-magit--read-shell-buffer repo-root))
-         (commit-sha (timfel/agent-shell-magit--commit-sha))
-         (file (magit-section-parent-value section))
-         (patch (timfel/agent-shell-magit--region-context section))
-         (request (timfel/agent-shell-magit--request
-                   repo-root commit-sha file comment patch)))
+  (if-let* ((section (magit-current-section))
+            (repo-root (magit-toplevel))
+            (commit-sha (magit-buffer-revision))
+            (file (magit-section-parent-value section))
+            (shell-buffer (timfel/agent-shell-magit--read-shell-buffer repo-root))
+            (patch (timfel/agent-shell-magit--region-context section))
+            (request (timfel/agent-shell-magit--request repo-root commit-sha file comment patch)))
     (with-current-buffer shell-buffer
       (agent-shell-queue-request request))
     (message "Queued review comment for %s in %s"
