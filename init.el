@@ -327,9 +327,11 @@
               icomplete-forward-completions
               icomplete-backward-completions
               icomplete-minibuffer-setup
+              icomplete-ret
               icomplete-force-complete)
   :bind (:map icomplete-minibuffer-map
               ("RET" . #'icomplete-fido-ret)
+              ("C-<return>" . #'icomplete-ret)
               ("TAB" . #'icomplete-force-complete)
               ("DEL" . #'icomplete-fido-backward-updir)
               ("C-d" . #'icomplete-fido-delete-char)
@@ -347,7 +349,7 @@
   (icomplete-in-buffer t)
   (icomplete-hide-common-prefix t)
   (icomplete-tidy-shadowed-file-names t)
-  (icomplete-show-matches-on-no-input t)
+  (icomplete-show-matches-on-no-input nil)
   (completion-flex-nospace nil)
   :config
   (setq completion-ignore-case t
