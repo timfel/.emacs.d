@@ -457,7 +457,7 @@
   (company-idle-delay (if (eq system-type 'windows-nt) 10 0.2)))
 
 (use-package vc
-  :if (eq system-type 'windows-nt)
+  :if (memq system-type '(windows-nt android))
   :custom
   (vc-revert-show-diff nil)
   :bind (("C-x C-z" . project-vc-dir)))
@@ -556,7 +556,7 @@
                         (shell-command cmd)))))))
 
 (use-package magit
-  :unless (eq system-type 'windows-nt)
+  :unless (memq system-type '(windows-nt android))
   :bind (("C-x C-z" . magit-status)
          :map magit-diff-mode-map
          ("C-c c" . timfel/magit-diff-comment-region-with-agent-shell))
@@ -567,22 +567,22 @@
   (magit-auto-revert-mode))
 
 (use-package all-the-icons
-  :unless (eq system-type 'windows-nt)
+  :unless (memq system-type '(android windows-nt))
   :ensure t)
 
 (use-package all-the-icons-completion
-  :unless (eq system-type 'windows-nt)
+  :unless (memq system-type '(android windows-nt))
   :after all-the-icons
   :ensure t)
 
 (use-package all-the-icons-dired
-  :unless (eq system-type 'windows-nt)
+  :unless (memq system-type '(android windows-nt))
   :after all-the-icons
   :ensure t)
 
 (use-package doom-modeline
   ;; remember to run (all-the-icons-install-fonts) manually some time
-  :unless (eq system-type 'windows-nt)
+  :unless (memq system-type '(android windows-nt))
   :after all-the-icons
   :ensure t
   :hook (after-init . doom-modeline-mode)
@@ -729,8 +729,15 @@
 
 (use-package eclipse-theme
   :ensure t
+  :unless (eq system-type 'android)
   :config
   (load-theme 'eclipse t))
+
+(use-package leuven-dark-theme
+  :ensure nil
+  :if (eq system-type 'android)
+  :config
+  (load-theme 'leuven-dark t))
 
 (use-package tramp
   :defer 30
@@ -1714,8 +1721,8 @@ input means nil arguments."
   :ensure t
   :commands org-social-timeline
   :custom
-  (org-social-relay "https://relay.org-social.org/"
-   org-social-my-public-url "https://host.org-social.org/timfelgentreff/social.org"))
+  (org-social-relay "https://relay.org-social.org/")
+  (org-social-my-public-url "https://host.org-social.org/timfelgentreff/social.org"))
 
 (use-package elfeed
   :ensure t
