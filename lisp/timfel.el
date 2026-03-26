@@ -208,16 +208,14 @@ the given regexp"
 (defun timfel/determine-recent-project-root ()
   "Examine the recent buffers to find the most recent one that was under a
 VC root"
-  (if-let* ((buffers-root-dirs (seq-keep (lambda (buffer)
-                                           (if-let* ((path (buffer-file-name buffer))
-                                                     (backend (vc-backend path))
-                                                     (dir (file-name-parent-directory path))
-                                                     (root (vc-call-backend backend 'root dir)))
-                                               root))
-                                         (buffer-list)))
-            (vc-root (seq-first buffers-root-dirs))
-            (root (expand-file-name vc-root)))
-      root))
+  (let* ((root nil))
+    (seq-find (lambda (buffer)
+                (if-let* ((path (buffer-file-name buffer))
+                          (backend (vc-backend path))
+                          (dir (file-name-parent-directory path)))
+                    (setq root (vc-call-backend backend 'root dir))))
+              (buffer-list))
+    root))
 
 (defun timfel/update-windows-terminal-settings-json ()
     "Find the Windows-side Windows terminal settings.json which is under
