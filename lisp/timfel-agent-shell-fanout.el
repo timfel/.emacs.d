@@ -61,7 +61,7 @@ Return new worktree-dir on success, nil on failure."
       ;; prune old worktrees first
       (process-file "git" nil nil nil "worktree" "prune")
       ;; then make the new worktree
-      (if (zerop (process-file "git" nil nil nil "worktree" "add" "-b" branch worktree-dir "HEAD"))
+      (if (zerop (process-file "git" nil nil nil "worktree" "add" "-b" branch worktree-dir "origin/master"))
           worktree-dir
         ;; if creating the worktree failed, let's check why
         (if (file-exists-p worktree-dir)
@@ -151,7 +151,8 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                (run-with-timer
                 i nil
                 (lambda (worktree-dir config task)
-                  (let ((default-directory worktree-dir))
+                  (let ((default-directory worktree-dir)
+                        (agent-shell-cwd-function (lambda () worktree-dir)))
                     (when-let ((shell-buffer (agent-shell-start :config config)))
                       ;; apply the dir-local variables and ensure we persist the worktree-parent
                       (run-with-timer

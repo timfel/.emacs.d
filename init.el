@@ -327,9 +327,11 @@
               icomplete-forward-completions
               icomplete-backward-completions
               icomplete-minibuffer-setup
+              icomplete-ret
               icomplete-force-complete)
   :bind (:map icomplete-minibuffer-map
               ("RET" . #'icomplete-fido-ret)
+              ("C-<return>" . #'icomplete-ret)
               ("TAB" . #'icomplete-force-complete)
               ("DEL" . #'icomplete-fido-backward-updir)
               ("C-d" . #'icomplete-fido-delete-char)
@@ -1069,6 +1071,9 @@
                               (add-hook 'kill-buffer-hook #'delete-window 0 t)))
                           (set-window-dedicated-p w t)))))
          :map vterm-mode-map
+         ("C-x b" . (lambda () (interactive)
+                      (set-window-dedicated-p (selected-window) nil)
+                      (call-interactively #'switch-to-buffer)))
          ("C-x C-f" . (lambda ()
                         (interactive)
                         (when vterm--process
@@ -1098,7 +1103,12 @@
                       (set-window-dedicated-p (selected-window) nil)
                       (vterm t)
                       (set-window-dedicated-p (selected-window) t)))
-         ("<f12>" . delete-window))
+         ("<f12>" . (lambda () (interactive)
+                      (let ((parent (window-parent)))
+                        (if parent
+                            (delete-window)
+                          (set-window-dedicated-p (selected-window) nil)
+                          (pop-to-buffer-same-window nil))))))
   :custom
   (vterm-max-scrollback 40000))
 
@@ -1122,6 +1132,9 @@
 (use-package esh-mode
   :defer t
   :bind (:map eshell-mode-map
+         ("C-x b" . (lambda () (interactive)
+                      (set-window-dedicated-p (selected-window) nil)
+                      (call-interactively #'switch-to-buffer)))
          ("C-x <left>" . (lambda () (interactive)
                            (let* ((bl (seq-sort (lambda (a b) (string-lessp (buffer-name a) (buffer-name b))) (buffer-list)))
                                   (before (seq-take-while (lambda (b) (not (eq b (current-buffer)))) bl))
@@ -1144,7 +1157,12 @@
                       (set-window-dedicated-p (selected-window) nil)
                       (eshell t)
                       (set-window-dedicated-p (selected-window) t)))
-         ("<f12>" . delete-window)))
+         ("<f12>" . (lambda () (interactive)
+                      (let ((parent (window-parent)))
+                        (if parent
+                            (delete-window)
+                          (set-window-dedicated-p (selected-window) nil)
+                          (pop-to-buffer-same-window nil)))))))
 
 (use-package eglot-booster
   :after eglot
@@ -1271,11 +1289,15 @@ input means nil arguments."
               dired-get-file-for-visit lsp--line-character-to-point
               lsp-booster--advice-final-command
               lsp-booster--advice-json-parse lsp-diagnostics
+              lsp-find-definition lsp-find-references
+              lsp-execute-code-action lsp-ido-workspace-symbol
               my/c-clear-string-fences)
   :ensure t
   :commands (lsp)
   :bind (:map lsp-mode-map
          ("C-," . lsp-execute-code-action)
+         ("M-." . lsp-find-definition)
+         ("C-M-." . lsp-find-references)
          ("C-S-t" . lsp-ido-workspace-symbol))
   :hook ((lsp-mode . flymake-mode))
   :custom
@@ -1290,6 +1312,7 @@ input means nil arguments."
   (lsp-report-if-no-buffer t)
   (lsp-enable-snippet t)
   (lsp-enable-xref t)
+  (lsp-diagnostics-provider :flymake)
   (lsp-completion-enable t)
   (lsp-completion-filter-on-incomplete nil)
   (lsp-completion-show-detail t)
@@ -1304,6 +1327,7 @@ input means nil arguments."
   (lsp-modeline-diagnostics-enable t)
   (lsp-modeline-code-actions-enable nil)
   :config
+  (require 'treemacs)
   (setq lsp-headerline-arrow ">")
   (defun lsp-goto-next-diagnostic ()
     "Get lsp-diagnostics, it returns a hash mapping file names to a list of
@@ -1470,6 +1494,7 @@ input means nil arguments."
               lsp-workspace-shutdown my/lsp-find-session-folder-with-mx
               my/setup-java-workspace-dir)
   :after (lsp-mode treemacs)
+  :demand t
   :mode ("\\.java.*\\.class" . java-mode)
   :custom
   (lsp-java-jdt-download-url "https://www.eclipse.org/downloads/download.php?file=/jdtls/snapshots/jdt-language-server-latest.tar.gz")
@@ -1767,8 +1792,8 @@ input means nil arguments."
   :ensure t
   :commands org-social-timeline
   :custom
-  (org-social-relay "https://relay.org-social.org/"
-   org-social-my-public-url "https://host.org-social.org/timfelgentreff/social.org"))
+  (org-social-relay "https://relay.org-social.org/")
+  (org-social-my-public-url "https://host.org-social.org/timfelgentreff/social.org"))
 
 (use-package elfeed
   :ensure t
