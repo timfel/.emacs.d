@@ -731,15 +731,10 @@
 
 (use-package eclipse-theme
   :ensure t
-  :unless (eq system-type 'android)
   :config
-  (load-theme 'eclipse t))
-
-(use-package leuven-dark-theme
-  :ensure nil
-  :if (eq system-type 'android)
-  :config
-  (load-theme 'leuven-dark t))
+  (if (eq system-type 'android)
+      (load-theme 'leuven-dark t)
+    (load-theme 'eclipse t)))
 
 (use-package tramp
   :defer 30
