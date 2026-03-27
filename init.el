@@ -1018,6 +1018,7 @@
                               (add-hook 'kill-buffer-hook #'delete-window 0 t)))
                           (set-window-dedicated-p w t)))))
          :map vterm-mode-map
+         ("C-x b" . #'switch-to-buffer-other-window)
          ("C-x C-f" . (lambda ()
                         (interactive)
                         (when vterm--process
@@ -1071,6 +1072,7 @@
 (use-package esh-mode
   :defer t
   :bind (:map eshell-mode-map
+         ("C-x b" . #'switch-to-buffer-other-window)
          ("C-x <left>" . (lambda () (interactive)
                            (let* ((bl (seq-sort (lambda (a b) (string-lessp (buffer-name a) (buffer-name b))) (buffer-list)))
                                   (before (seq-take-while (lambda (b) (not (eq b (current-buffer)))) bl))
@@ -1220,14 +1222,14 @@ input means nil arguments."
               dired-get-file-for-visit lsp--line-character-to-point
               lsp-booster--advice-final-command
               lsp-booster--advice-json-parse lsp-diagnostics
-              lsp-find-definitions lsp-find-references
+              lsp-find-definition lsp-find-references
               lsp-execute-code-action lsp-ido-workspace-symbol
               my/c-clear-string-fences)
   :ensure t
   :commands (lsp)
   :bind (:map lsp-mode-map
          ("C-," . lsp-execute-code-action)
-         ("M-." . lsp-find-definitions)
+         ("M-." . lsp-find-definition)
          ("C-M-." . lsp-find-references)
          ("C-S-t" . lsp-ido-workspace-symbol))
   :hook ((lsp-mode . flymake-mode))
