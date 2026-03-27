@@ -1220,6 +1220,8 @@ input means nil arguments."
               dired-get-file-for-visit lsp--line-character-to-point
               lsp-booster--advice-final-command
               lsp-booster--advice-json-parse lsp-diagnostics
+              lsp-find-definitions lsp-find-references
+              lsp-execute-code-action lsp-ido-workspace-symbol
               my/c-clear-string-fences)
   :ensure t
   :commands (lsp)
@@ -1256,6 +1258,7 @@ input means nil arguments."
   (lsp-modeline-diagnostics-enable t)
   (lsp-modeline-code-actions-enable nil)
   :config
+  (require 'treemacs)
   (setq lsp-headerline-arrow ">")
   (defun lsp-goto-next-diagnostic ()
     "Get lsp-diagnostics, it returns a hash mapping file names to a list of
@@ -1422,6 +1425,7 @@ input means nil arguments."
               lsp-workspace-shutdown my/lsp-find-session-folder-with-mx
               my/setup-java-workspace-dir)
   :after (lsp-mode treemacs)
+  :demand t
   :mode ("\\.java.*\\.class" . java-mode)
   :custom
   (lsp-java-jdt-download-url "https://www.eclipse.org/downloads/download.php?file=/jdtls/snapshots/jdt-language-server-latest.tar.gz")
