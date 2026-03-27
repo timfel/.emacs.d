@@ -776,47 +776,57 @@
   :config
   (if (eq system-type 'windows-nt)
       ;; uses https://github.com/trackd/Sixel, installed via Install-Module Sixel
-      (unless (or (executable-find "img2sixel")
-                  (executable-find "img2sixel.notfound"))
-        (let ((script-dir (locate-user-emacs-file "bin/")))
-              (mkdir script-dir t)
-              (if (zerop (process-file (executable-find "powershell.exe")
-                                       nil nil nil
-                                       "-Command" "Get-Command ConvertTo-Sixel"))
-                  (let ((script (expand-file-name "img2sixel.bat" script-dir)))
-                    (with-temp-file script
-                      (insert "@echo off\r\n")
-                      (insert "setlocal EnableDelayedExpansion\r\n")
-                      (insert "set \"ARGS=\"\r\n")
-                      (insert ":loop\r\n")
-                      (insert "if \"%~1\"==\"\" goto done\r\n")
-                      (insert "set \"A=%~1\"\r\n")
-                      (insert "if /I \"!A!\"==\"-w\" goto width\r\n")
-                      (insert "if /I \"!A!\"==\"-h\" goto height\r\n")
-                      (insert "set \"ARGS=!ARGS! \"\r\n")
-                      (insert "set \"ARGS=!ARGS!\"%~1\"\"\r\n")
-                      (insert "shift\r\n")
-                      (insert "goto loop\r\n")
-                      (insert ":width\r\n")
-                      (insert "shift\r\n")
-                      (insert "set /a V=%~1/10\r\n")
-                      (insert "set \"ARGS=!ARGS! -w \"\r\n")
-                      (insert "set \"ARGS=!ARGS!!V!\"\r\n")
-                      (insert "shift\r\n")
-                      (insert "goto loop\r\n")
-                      (insert ":height\r\n")
-                      (insert "shift\r\n")
-                      (insert "set /a V=%~1/10\r\n")
-                      (insert "set \"ARGS=!ARGS! -h \"\r\n")
-                      (insert "set \"ARGS=!ARGS!!V!\"\r\n")
-                      (insert "shift\r\n")
-                      (insert "goto loop\r\n")
-                      (insert ":done\r\n")
-                      (insert "powershell.exe -NoProfile -Command \"ConvertTo-Sixel\" %ARGS%\r\n")
-                      (insert "endlocal\r\n")))
-                (let ((marker (locate-user-emacs-file "bin/img2sixel.notfound.bat")))
-                  (with-temp-file marker
-                    (insert "missing ConvertTo-Sixel")))))))
+      (let* ((script-dir (locate-user-emacs-file "bin/"))
+             (script (expand-file-name "img2sixel.bat" script-dir))
+             (script-not-found (expand-file-name "img2sixel.notfound" script-dir))
+             (img2sixel (executable-find "img2sixel")))
+        (unless img2sixel
+          (mkdir script-dir t)
+          (unless (or (file-exists-p script) (file-exists-p script-not-found))
+            (if (zerop (process-file (executable-find "powershell.exe")
+                                     nil nil nil
+                                     "-Command" "Get-Command ConvertTo-Sixel"))
+                (with-temp-file script
+                  (insert "@echo off
+                           setlocal EnableDelayedExpansion
+                           
+                           set \"PSCMD=ConvertTo-Sixel -Force -Protocol Sixel\"
+                           
+                           :loop
+                           if \"%~1\"==\"\" goto done
+                           set \"A=%~1\"
+                           if /I \"!A!\"==\"-w\" goto width
+                           if /I \"!A!\"==\"-h\" goto height
+                           
+                           rem append a normal argument and escape single quotes for PowerShell
+                           set \"ARG=%~1\"
+                           set \"ARG=!ARG:'=''!\"
+                           set \"PSCMD=!PSCMD! '!ARG!'\"
+                           
+                           shift
+                           goto loop
+                           
+                           :width
+                           shift
+                           set /a V=%~1/10
+                           set \"PSCMD=!PSCMD! -Width !V!\"
+                           shift
+                           goto loop
+                           
+                           :height
+                           shift
+                           set /a V=%~1/20
+                           set \"PSCMD=!PSCMD! -Height !V!\"
+                           shift
+                           goto loop
+                           
+                           :done
+                           powershell.exe -NoLogo -NoProfile -NonInteractive -Command \"$s = & { %PSCMD% }; $bytes = [System.Text.Encoding]::ASCII.GetBytes([string]$s); $stdout = [System.Console]::OpenStandardOutput(); $stdout.Write($bytes, 0, $bytes.Length)\"
+                           endlocal"))
+              (with-temp-file script-not-found
+                (insert "missing ConvertTo-Sixel"))))
+          (if (file-exists-p script)
+              (setq sixel-graphics-encoder-program script)))))
   (sixel-graphics-mode t))
 
 (use-package cmake-mode
