@@ -1725,8 +1725,8 @@ input means nil arguments."
   :ensure t
   :commands org-social-timeline
   :custom
-  (org-social-relay "https://relay.org-social.org/"
-   org-social-my-public-url "https://host.org-social.org/timfelgentreff/social.org"))
+  (org-social-relay "https://relay.org-social.org/")
+  (org-social-my-public-url "https://host.org-social.org/timfelgentreff/social.org"))
 
 (use-package elfeed
   :ensure t
