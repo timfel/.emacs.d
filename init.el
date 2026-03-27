@@ -349,7 +349,7 @@
   (icomplete-in-buffer t)
   (icomplete-hide-common-prefix t)
   (icomplete-tidy-shadowed-file-names t)
-  (icomplete-show-matches-on-no-input nil)
+  (icomplete-show-matches-on-no-input t)
   (completion-flex-nospace nil)
   :config
   (setq completion-ignore-case t
@@ -1225,6 +1225,8 @@ input means nil arguments."
   :commands (lsp)
   :bind (:map lsp-mode-map
          ("C-," . lsp-execute-code-action)
+         ("M-." . lsp-find-definitions)
+         ("C-M-." . lsp-find-references)
          ("C-S-t" . lsp-ido-workspace-symbol))
   :hook ((lsp-mode . flymake-mode))
   :custom
