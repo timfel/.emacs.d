@@ -1018,7 +1018,9 @@
                               (add-hook 'kill-buffer-hook #'delete-window 0 t)))
                           (set-window-dedicated-p w t)))))
          :map vterm-mode-map
-         ("C-x b" . #'switch-to-buffer-other-window)
+         ("C-x b" . (lambda () (interactive)
+                      (set-window-dedicated-p (selected-window) nil)
+                      (call-interactively #'switch-to-buffer)))
          ("C-x C-f" . (lambda ()
                         (interactive)
                         (when vterm--process
@@ -1048,7 +1050,12 @@
                       (set-window-dedicated-p (selected-window) nil)
                       (vterm t)
                       (set-window-dedicated-p (selected-window) t)))
-         ("<f12>" . delete-window))
+         ("<f12>" . (lambda () (interactive)
+                      (let ((parent (window-parent)))
+                        (if parent
+                            (delete-window)
+                          (set-window-dedicated-p (selected-window) nil)
+                          (pop-to-buffer-same-window nil))))))
   :custom
   (vterm-max-scrollback 40000))
 
@@ -1072,7 +1079,9 @@
 (use-package esh-mode
   :defer t
   :bind (:map eshell-mode-map
-         ("C-x b" . #'switch-to-buffer-other-window)
+         ("C-x b" . (lambda () (interactive)
+                      (set-window-dedicated-p (selected-window) nil)
+                      (call-interactively #'switch-to-buffer)))
          ("C-x <left>" . (lambda () (interactive)
                            (let* ((bl (seq-sort (lambda (a b) (string-lessp (buffer-name a) (buffer-name b))) (buffer-list)))
                                   (before (seq-take-while (lambda (b) (not (eq b (current-buffer)))) bl))
@@ -1095,7 +1104,12 @@
                       (set-window-dedicated-p (selected-window) nil)
                       (eshell t)
                       (set-window-dedicated-p (selected-window) t)))
-         ("<f12>" . delete-window)))
+         ("<f12>" . (lambda () (interactive)
+                      (let ((parent (window-parent)))
+                        (if parent
+                            (delete-window)
+                          (set-window-dedicated-p (selected-window) nil)
+                          (pop-to-buffer-same-window nil)))))))
 
 (use-package eglot-booster
   :after eglot
