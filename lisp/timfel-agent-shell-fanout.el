@@ -61,7 +61,7 @@ Return new worktree-dir on success, nil on failure."
       ;; prune old worktrees first
       (process-file "git" nil nil nil "worktree" "prune")
       ;; then make the new worktree
-      (if (zerop (process-file "git" nil nil nil "worktree" "add" "-b" branch worktree-dir "HEAD"))
+      (if (zerop (process-file "git" nil nil nil "worktree" "add" "-b" branch worktree-dir "origin/master"))
           worktree-dir
         ;; if creating the worktree failed, let's check why
         (if (file-exists-p worktree-dir)
