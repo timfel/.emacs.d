@@ -99,6 +99,31 @@
   (put 'dired-find-alternate-file 'disabled nil)
   (setq-default indent-tabs-mode nil))
 
+(use-package android
+  :if (eq system-type 'android)
+  :config
+  (load-theme 'leuven-dark t)
+  ;; we do not have permissions above our own and some shared folders in
+  ;; emacs on android
+  (setq locate-dominating-stop-dir-regexp
+        (concat locate-dominating-stop-dir-regexp
+                "\\|\\`/data/data/org.gnu.emacs/\\'"
+                "\\|\\`/data/data/com.termux/\\'"
+                "\\|\\`/content/storage/\\'"))
+  ;; fullscreen
+  (set-frame-parameter nil 'fullscreen 'fullboth)
+  :bind
+  (("<volume-up>" . (lambda ()
+                      (interactive)
+                      (org-capture nil "n")
+                      (delete-other-windows)
+                      (text-scale-set +2)))
+   ("<volume-down>" . (lambda ()
+                        (interactive)
+                        (org-agenda nil "t")
+                        (delete-other-windows)
+                        (text-scale-set +2)))))
+
 (use-package request ;; has not had a release in ages, but bugfixes on master
   :ensure t
   :defer t
@@ -731,10 +756,9 @@
 
 (use-package eclipse-theme
   :ensure t
+  :unless (eq system-type 'android)
   :config
-  (if (eq system-type 'android)
-      (load-theme 'leuven-dark t)
-    (load-theme 'eclipse t)))
+  (load-theme 'eclipse t))
 
 (use-package tramp
   :defer 30
@@ -1787,15 +1811,6 @@ input means nil arguments."
 				   (set-face-attribute 'default nil :family "Consolas" :height 105)
                                  (if (eq system-type 'android)
                                      (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120)))))))
-
-  (when (eq system-type 'android)
-    ;; we do not have permissions above our own and some shared folders in
-    ;; emacs on android
-    (setq locate-dominating-stop-dir-regexp
-          (concat locate-dominating-stop-dir-regexp
-                  "\\|\\`/data/data/org.gnu.emacs/\\'"
-                  "\\|\\`/data/data/com.termux/\\'"
-                  "\\|\\`/content/storage/\\'")))
 
   (when (eq system-type 'gnu/linux)
     (if (or (eq window-system 'pgtk)
