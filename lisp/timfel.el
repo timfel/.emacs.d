@@ -38,6 +38,16 @@ trailing whitespace from files"
                  (untabify (point-min) (point-max))
                  (delete-trailing-whitespace)))))
 
+(defmacro with-auto-default (&rest body)
+  "Execute BODY, making all `completing-read' calls return their default value."
+  `(cl-letf (((symbol-function 'completing-read)
+              (lambda (prompt collection &optional predicate require-match 
+                             initial-input hist def inherit-input-method)
+                ;; If 'def' is a list, return the first element; otherwise return 'def'.
+                ;; If 'def' is nil, return an empty string (standard behavior).
+                (or (if (listp def) (car def) def) ""))))
+     ,@body))
+
 (defun timfel/ascii-table ()
   "Print the ascii table. Based on a defun by Alex Schroeder <asc@bsiag.com>"
   (interactive)

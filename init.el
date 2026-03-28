@@ -113,16 +113,28 @@
   ;; fullscreen
   (set-frame-parameter nil 'fullscreen 'fullboth)
   :bind
-  (("<volume-up>" . (lambda ()
+  (("<volume-down>" . (lambda ()
                       (interactive)
                       (org-capture nil "n")
                       (delete-other-windows)
+                      (visual-line-mode t)
                       (text-scale-set +2)))
-   ("<volume-down>" . (lambda ()
+   ("C-<volume-down>" . (lambda ()
+                          (interactive)
+                          (with-auto-default
+                           (org-social-new-post))
+                          (delete-other-windows)
+                          (visual-line-mode t)
+                          (text-scale-set +2)))
+   ("<volume-up>" . (lambda ()
                         (interactive)
                         (org-agenda nil "t")
                         (delete-other-windows)
-                        (text-scale-set +2)))))
+                        (visual-line-mode t)
+                        (text-scale-set +2)))
+   :map org-mode-map
+   ("<volume-up>" . org-capture-kill)
+   ("<volume-down>" . org-capture-finalize)))
 
 (use-package request ;; has not had a release in ages, but bugfixes on master
   :ensure t
