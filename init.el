@@ -81,7 +81,7 @@
   (buffer-file-coding-system 'utf-8-unix)
   (tool-bar-position 'bottom)
   (tool-bar-always-show-default t)
-  (tool-bar-button-margin 16)
+  (tool-bar-button-margin 32)
 
   :config
   (if (file-exists-p custom-file)
@@ -103,6 +103,9 @@
   :if (eq system-type 'android)
   :config
   (load-theme 'leuven-dark t)
+  (global-visual-line-mode t)
+  (setq visual-line-fringe-indicators
+        '(left-curly-arrow right-curly-arrow))
   ;; we do not have permissions above our own and some shared folders in
   ;; emacs on android
   (setq locate-dominating-stop-dir-regexp
@@ -112,29 +115,67 @@
                 "\\|\\`/content/storage/\\'"))
   ;; fullscreen
   (set-frame-parameter nil 'fullscreen 'fullboth)
+  ;; useful menus
+  (setq tool-bar-map '(keymap))
+  (define-key-after tool-bar-map [separator-0] menu-bar-separator)
+  (tool-bar-add-item "save" 'save-buffer 'save-buffer)
+  (tool-bar-add-item "close" (lambda ()
+                               (interactive)
+                               (kill-buffer nil)) 'kb)
+  (define-key-after tool-bar-map [separator-1] menu-bar-separator)
+  (tool-bar-add-item "back-arrow" 'undo 'undo)
+  (define-key-after tool-bar-map [separator-2] menu-bar-separator)
+  (tool-bar-add-item "home" 'delete-other-windows 'delete-other-windows)
+  (tool-bar-add-item "refresh" 'org-social-timeline 'ost)
+  (tool-bar-add-item "new" (lambda ()
+                             (interactive)
+                              (org-capture nil "n")
+                              (delete-other-windows)
+                              (visual-line-mode t)
+                              (text-scale-set +2)) 'oc)
   :bind
   (("<volume-down>" . (lambda ()
-                      (interactive)
-                      (org-capture nil "n")
-                      (delete-other-windows)
-                      (visual-line-mode t)
-                      (text-scale-set +2)))
-   ("C-<volume-down>" . (lambda ()
-                          (interactive)
-                          (with-auto-default
-                           (org-social-new-post))
-                          (delete-other-windows)
-                          (visual-line-mode t)
-                          (text-scale-set +2)))
-   ("<volume-up>" . (lambda ()
                         (interactive)
-                        (org-agenda nil "t")
-                        (delete-other-windows)
-                        (visual-line-mode t)
-                        (text-scale-set +2)))
-   :map org-mode-map
-   ("<volume-up>" . org-capture-kill)
-   ("<volume-down>" . org-capture-finalize)))
+                        (let ((modes (cons major-mode local-minor-modes)))
+                          (pcase modes
+                            ((pred (memq 'org-capture-mode)) ;; save org note
+                             (org-capture-finalize)
+                             (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
+                             (end-of-buffer))
+
+                            ((pred (memq 'org-social-ui-mode)) ;; org-social timeline
+                             (with-auto-default (org-social-new-post))
+                             (delete-other-windows)
+                             (visual-line-mode t)
+                             (text-scale-set +2))
+
+                            ((pred (memq 'org-social-mode)) ;; send org-social post
+                             (save-buffer)
+                             (kill-buffer)
+                             (org-social-timeline))
+
+                            (_ ;; default: start a new capture note
+                              (org-capture nil "n")
+                              (delete-other-windows)
+                              (visual-line-mode t)
+                              (text-scale-set +2))))))
+   ("<volume-up>" . (lambda ()
+                      (interactive)
+                      (let ((modes (cons major-mode local-minor-modes)))
+                        (pcase modes
+                          ((pred (memq 'org-capture-mode)) ;; abort org note and show prev notes
+                           (org-capture-kill)
+                           (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
+                           (end-of-buffer))
+
+                          ((pred (memq 'org-social-ui-mode))
+                           (org-social-ui--add-reaction-at-point)) ;; react to org-social post
+
+                          ((pred (memq 'org-social-mode)) ;; cancel org social post
+                           (kill-buffer))
+
+                          (_ ;; default, open the social timeline
+                           (org-social-timeline))))))))
 
 (use-package request ;; has not had a release in ages, but bugfixes on master
   :ensure t
@@ -374,6 +415,8 @@
               ("C-d" . #'icomplete-fido-delete-char)
               ("<right>" . #'icomplete-forward-completions)
               ("<left>" . #'icomplete-backward-completions)
+              ("<volume-down>" . #'icomplete-forward-completions)
+              ("<volume-up>" . #'icomplete-backward-completions)
               ("C-c C-d" . (lambda ()
                              (interactive)
                              (message "category=%S"
