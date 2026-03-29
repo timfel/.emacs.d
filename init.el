@@ -11,10 +11,10 @@
 (add-to-list 'package-archives '("cselpa" . "https://elpa.thecybershadow.net/packages/"))
 (setq package-archive-priorities
       '(("melpa-stable" . 10)
-	("nongnu" . 5)
-	("gnu" . 5)
-	("melpa" . 1)
-	("cselpa" . 0)))
+        ("nongnu" . 5)
+        ("gnu" . 5)
+        ("melpa" . 1)
+        ("cselpa" . 0)))
 (package-initialize)
 
 (require 'use-package)
@@ -30,23 +30,23 @@
          ("M-q" . fill-paragraph)
          ("C-M-q" . timfel/fill-paragraph-sentence-wise)
          ("C-x <left>" . (lambda ()
-		           (interactive)
-		           (push-mark)
-		           (if (xref-marker-stack-empty-p)
-		               (previous-buffer)
-		             (xref-go-back))))
+                           (interactive)
+                           (push-mark)
+                           (if (xref-marker-stack-empty-p)
+                               (previous-buffer)
+                             (xref-go-back))))
          ("C-x <right>" . pop-global-mark)
          ("C-<down>" . (lambda (n) (interactive "p") (forward-line n) (scroll-up n)))
          ("C-<up>" . (lambda (n) (interactive "p") (forward-line (- n)) (scroll-down n)))
          ("C-/" . (lambda ()
-		    (interactive)
-		    (if mark-active
-		        (call-interactively #'comment-or-uncomment-region)
-		      (save-excursion
-		        (beginning-of-line)
-		        (set-mark (point))
-		        (end-of-line)
-		        (call-interactively #'comment-or-uncomment-region)))))
+                    (interactive)
+                    (if mark-active
+                        (call-interactively #'comment-or-uncomment-region)
+                      (save-excursion
+                        (beginning-of-line)
+                        (set-mark (point))
+                        (end-of-line)
+                        (call-interactively #'comment-or-uncomment-region)))))
          ("M-]" . forward-list)
          ("C-M-]" . backward-list)
          ("C-z" . (lambda () (interactive) (beep))))
@@ -245,8 +245,8 @@
 
 (use-package isearch
   :bind (("C-S-s" . isearch-forward-thing-at-point)
-	 :map isearch-mode-map
-	 ([backspace] . isearch-edit-string)))
+         :map isearch-mode-map
+         ([backspace] . isearch-edit-string)))
 
 (use-package hippie-exp
   :bind (([remap dabbrev-expand] . hippie-expand))
@@ -314,11 +314,11 @@
   :init
   (define-prefix-command 'ctl-x-o-map)
   :bind (:map ctl-x-map
-	 ("o" . ctl-x-o-map)
-	 :map ctl-x-o-map
+         ("o" . ctl-x-o-map)
+         :map ctl-x-o-map
          ("w" . other-window) ;; because I clobbered the other window command
-	 ("a" . org-agenda)
-	 ("c" . org-capture)
+         ("a" . org-agenda)
+         ("c" . org-capture)
          :map org-mode-map
          ("C-c <right>" . org-shiftright)
          ("C-c <left>" . org-shiftleft)
@@ -475,7 +475,7 @@
   (when (and (eq system-type 'windows-nt)
              (equal find-program "find"))
     (grep-apply-setting 'grep-find-template
-			"findstr /S /N /D:. /C:<R> <F>")
+                        "findstr /S /N /D:. /C:<R> <F>")
     (setq find-name-arg nil))
   (add-to-list 'grep-find-ignored-files ".venv")
   (add-to-list 'grep-find-ignored-directories "mxbuild")
@@ -734,24 +734,24 @@
   :defines (c-syntactic-context)
   :functions (c-update-modeline my/c-update-modeline)
   :hook ((cc-mode . timfel/infer-indentation-style)
-	 (java-mode . timfel/friendly-whitespace)
-	 (java-mode . (lambda ()
-			(set-fill-column 99)
-			(c-set-offset 'substatement-open 0)
-			(c-set-offset 'case-label '+)
-			(c-set-offset 'arglist-close 0)
-			(if (assoc 'inexpr-class c-offsets-alist)
-			    (c-set-offset 'inexpr-class 0))
-			(c-set-offset 'arglist-cont-nonempty
-				      (lambda (_syntax)
-					(save-excursion
-					  (if (and (= (length c-syntactic-context) 2)
-						   (eq (caar c-syntactic-context) 'arglist-cont-nonempty)
-						   (or
-						    (eq (caadr c-syntactic-context) 'statement-block-intro)
-						    (eq (caadr c-syntactic-context) 'block-close)))
-					      0
-					    16)))))))
+         (java-mode . timfel/friendly-whitespace)
+         (java-mode . (lambda ()
+                        (set-fill-column 99)
+                        (c-set-offset 'substatement-open 0)
+                        (c-set-offset 'case-label '+)
+                        (c-set-offset 'arglist-close 0)
+                        (if (assoc 'inexpr-class c-offsets-alist)
+                            (c-set-offset 'inexpr-class 0))
+                        (c-set-offset 'arglist-cont-nonempty
+                                      (lambda (_syntax)
+                                        (save-excursion
+                                          (if (and (= (length c-syntactic-context) 2)
+                                                   (eq (caar c-syntactic-context) 'arglist-cont-nonempty)
+                                                   (or
+                                                    (eq (caadr c-syntactic-context) 'statement-block-intro)
+                                                    (eq (caadr c-syntactic-context) 'block-close)))
+                                              0
+                                            16)))))))
   :custom
   (c-basic-offset 4)
   :config
@@ -1359,16 +1359,16 @@ input means nil arguments."
   (setq lsp-headerline-arrow ">")
   (defun lsp-goto-next-diagnostic ()
     "Get lsp-diagnostics, it returns a hash mapping file names to a list of
-	 	hashes, each of which is a diagnostic. Search in the file names for the
-	 	current buffer's file name. If found, search the list of diagnostics.
-	 	Get the vallue for the :range key, and compare the :start of the
-	 	resulting hash with the current point position until we find the next
-	 	diagnostic that is after the current point. If found, set the point to
-	 	that next diagnistic's start position. If there are no more diagnistics
-	 	after the current point in the list, take the next file name from the
-	 	outer hash. If the file name that got picked is not the current buffer,
-	 	open the file and position the point at the start of the range of the
-	 	first hash in the list of diagnistics."
+                hashes, each of which is a diagnostic. Search in the file names for the
+                current buffer's file name. If found, search the list of diagnostics.
+                Get the vallue for the :range key, and compare the :start of the
+                resulting hash with the current point position until we find the next
+                diagnostic that is after the current point. If found, set the point to
+                that next diagnistic's start position. If there are no more diagnistics
+                after the current point in the list, take the next file name from the
+                outer hash. If the file name that got picked is not the current buffer,
+                open the file and position the point at the start of the range of the
+                first hash in the list of diagnistics."
     (interactive)
     (let* ((current-file (or (buffer-file-name) (dired-get-file-for-visit)))
            (diagnostics-table (lsp-diagnostics))
@@ -1538,7 +1538,7 @@ input means nil arguments."
   (lsp-java-completion-import-order ["java" "javax" "org" "com"])
   (lsp-java-import-order ["java" "javax" "org" "com"])
   (dap-java-default-debug-port 8000)
-  :config 
+  :config
   (defun my/lsp-find-session-folder-with-mx (oldfun session file-name)
     (or (funcall oldfun session file-name)
         (funcall oldfun session
@@ -1859,49 +1859,49 @@ input means nil arguments."
 
   (if (display-graphic-p)
       (run-with-idle-timer 0 nil
-			   (lambda ()
-			     (if (memq window-system '(x pgtk))
-			         (set-face-attribute 'default nil :font "DejaVu Sans Mono-10")
-			       (if (eq window-system 'w32)
-				   (set-face-attribute 'default nil :family "Consolas" :height 105)
+                           (lambda ()
+                             (if (memq window-system '(x pgtk))
+                                 (set-face-attribute 'default nil :font "DejaVu Sans Mono-10")
+                               (if (eq window-system 'w32)
+                                   (set-face-attribute 'default nil :family "Consolas" :height 105)
                                  (if (eq system-type 'android)
                                      (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120)))))))
 
   (when (eq system-type 'gnu/linux)
     (if (or (eq window-system 'pgtk)
-	    (and (not window-system) (getenv "WAYLAND_DISPLAY")))
+            (and (not window-system) (getenv "WAYLAND_DISPLAY")))
         (progn
-	  (setq wl-copy-process nil)
-	  (defun wl-copy (text)
-	    (setq wl-copy-process (make-process :name "wl-copy"
-					        :buffer nil
-					        :command '("wl-copy" "-f" "-n")
-					        :connection-type 'pipe))
-	    (process-send-string wl-copy-process text)
-	    (process-send-eof wl-copy-process))
-	  (defun wl-paste ()
-	    (if (and wl-copy-process (process-live-p wl-copy-process))
-	        nil ; should return nil if we're the current paste owner
-	      (shell-command-to-string "wl-paste -n | tr -d \r")))
-	  (setq interprogram-cut-function 'wl-copy
-	        interprogram-paste-function 'wl-paste))))
+          (setq wl-copy-process nil)
+          (defun wl-copy (text)
+            (setq wl-copy-process (make-process :name "wl-copy"
+                                                :buffer nil
+                                                :command '("wl-copy" "-f" "-n")
+                                                :connection-type 'pipe))
+            (process-send-string wl-copy-process text)
+            (process-send-eof wl-copy-process))
+          (defun wl-paste ()
+            (if (and wl-copy-process (process-live-p wl-copy-process))
+                nil ; should return nil if we're the current paste owner
+              (shell-command-to-string "wl-paste -n | tr -d \r")))
+          (setq interprogram-cut-function 'wl-copy
+                interprogram-paste-function 'wl-paste))))
 
   (when-let* ((nvm "~/.nvm/versions/node/")
-	      (_ (file-exists-p nvm)))
+              (_ (file-exists-p nvm)))
     (add-to-list 'exec-path (string-join (list nvm (car (sort (directory-files nvm) #'string-greaterp)) "bin") "/"))
     (setenv "PATH" (string-join exec-path path-separator)))
 
   (when-let* ((jdk21 (expand-file-name "~/.mx/jdks/labsjdk-ce-21/"))
-	      (_ (and (file-exists-p jdk21) (not (getenv "JAVA_HOME")))))
+              (_ (and (file-exists-p jdk21) (not (getenv "JAVA_HOME")))))
     (setenv "JAVA_HOME" jdk21))
 
   (when-let* ((sdkman (getenv "SDKMAN_DIR"))
               (jdk21 (expand-file-name (concat sdkman "candidates/java/21.0.4-oracle")))
-	      (_ (and (file-exists-p jdk21) (not (getenv "JAVA_HOME")))))
+              (_ (and (file-exists-p jdk21) (not (getenv "JAVA_HOME")))))
     (setenv "JAVA_HOME" jdk21))
 
   (when-let* ((eclipse (expand-file-name "~/dev/eclipse/eclipse"))
-	      (_ (and (file-exists-p eclipse) (not (getenv "ECLIPSE_EXE")))))
+              (_ (and (file-exists-p eclipse) (not (getenv "ECLIPSE_EXE")))))
     (setenv "ECLIPSE_EXE" eclipse))
 
   ;; 100 MiB
