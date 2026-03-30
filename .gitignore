@@ -33,3 +33,11 @@ lisp/ci-dashboard/
 /server/server
 /bin
 /lsp-servers
+/sixel-graphics-cache/
+/oca-codex-login.stamp
+/lisp/.dir-locals.el
+/history
+/forge-database.sqlite
+/.cache/
+/org-social-mentions
+/v-social.org
