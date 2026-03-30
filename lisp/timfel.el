@@ -23,6 +23,7 @@
 (require 'subr-x)
 
 (declare-function term-keys/windows-terminal-json "term-keys-windows-terminal")
+(defvar c-basic-offset)
 
 (defgroup timfel nil
   "Tim's local utility functions and commands."
@@ -37,6 +38,16 @@ trailing whitespace from files"
                (save-excursion
                  (untabify (point-min) (point-max))
                  (delete-trailing-whitespace)))))
+
+(defmacro with-auto-default (&rest body)
+  "Execute BODY, making all `completing-read' calls return their default value."
+  `(cl-letf (((symbol-function 'completing-read)
+              (lambda (prompt collection &optional predicate require-match 
+                             initial-input hist def inherit-input-method)
+                ;; If 'def' is a list, return the first element; otherwise return 'def'.
+                ;; If 'def' is nil, return an empty string (standard behavior).
+                (or (if (listp def) (car def) def) ""))))
+     ,@body))
 
 (defun timfel/ascii-table ()
   "Print the ascii table. Based on a defun by Alex Schroeder <asc@bsiag.com>"
@@ -96,6 +107,7 @@ Non-interactive arguments are Begin End Regexp"
   (interactive)
   ;; if our source file uses tabs, we use tabs, if spaces spaces, and if
   ;; neither, we use the current indent-tabs-mode
+  (require 'cc-mode)
   (let ((space-count (timfel/how-many-region (point-min) (point-max) "^  "))
         (tab-count (timfel/how-many-region (point-min) (point-max) "^\t")))
     (if (> space-count tab-count)

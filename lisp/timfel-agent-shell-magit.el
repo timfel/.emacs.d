@@ -24,15 +24,17 @@
                        (seq-filter #'buffer-live-p)
                        (seq-filter (lambda (b)
                                      (file-in-directory-p
-                                      (buffer-local-value default-directory b)
+                                      (buffer-local-value 'default-directory b)
                                       repo-root)))))
-            (choices (seq-map (lambda (buffer)
-                                (cons (format "%s  [%s]"
-                                              (buffer-name buffer)
-                                              (buffer-local-value 'default-directory buffer))
-                                      buffer))
-                              buffers)))
-      (completing-read "Agent shell: " choices nil t nil nil (caar choices))
+            (choices (mapcar (lambda (buffer)
+                               (cons (format "%s  [%s]"
+                                             (buffer-name buffer)
+                                             (buffer-local-value 'default-directory buffer))
+                                     buffer))
+                             buffers))
+            (picked (completing-read "Agent shell: " choices nil t nil nil
+                                     (caar choices))))
+      (cdr (assoc picked choices))
     (user-error "No agent-shell to send to")))
 
 (defun timfel/agent-shell-magit--selected-hunk ()
@@ -82,16 +84,16 @@ Use the active internal region when present, otherwise include the full hunk."
                           'timfel/agent-shell-magit-comment-history)))
   (if-let* ((section (magit-current-section))
             (repo-root (magit-toplevel))
-            (commit-sha (magit-buffer-revision))
+            (commit-sha (or (magit-buffer-revision) "uncommitted"))
             (file (magit-section-parent-value section))
             (shell-buffer (timfel/agent-shell-magit--read-shell-buffer repo-root))
             (patch (timfel/agent-shell-magit--region-context section))
             (request (timfel/agent-shell-magit--request repo-root commit-sha file comment patch)))
     (with-current-buffer shell-buffer
-      (agent-shell-queue-request request))
-    (message "Queued review comment for %s in %s"
-             (abbreviate-file-name file)
-             (buffer-name shell-buffer))))
+      (agent-shell-queue-request request)
+      (message "Queued review comment for %s in %s"
+               (abbreviate-file-name file)
+               (buffer-name shell-buffer)))))
 
 (provide 'timfel-agent-shell-magit)
 
