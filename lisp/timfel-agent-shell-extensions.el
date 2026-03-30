@@ -13,6 +13,7 @@
 (require 'timfel-agent-shell-magit)
 (require 'timfel-agent-shell-recovery)
 (require 'timfel-agent-shell-ui)
+(require 'timfel-agent-shell-context)
 
 ;;;###autoload
 (defun timfel/dired-agent-shell-marked-directories ()

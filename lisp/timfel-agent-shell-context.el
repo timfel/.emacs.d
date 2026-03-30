@@ -33,9 +33,9 @@
   :group 'timfel-agent-shell-context)
 
 (defcustom timfel/agent-shell-context-special-buffer-regexps
-  '("notes\\.org\\'"
-    "\\*Jira.*"
-    "\\*ci-dashboard\\*")
+  '("\\`\\*Backtrace\\*\\'"
+    "\\`\\*Jira.*"
+    "\\`\\*ci-dashboard\\*\\'")
   "Buffer name regexps that should always be eligible for context collection.
 
 These buffers are considered even when they are not part of the target
