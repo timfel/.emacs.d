@@ -12,6 +12,7 @@
 (require 'subr-x)
 
 (declare-function agent-shell--send-command "agent-shell" (&key prompt shell-buffer))
+(declare-function agent-shell--shell-buffer "agent-shell" (&rest args))
 
 (defgroup timfel-agent-shell-context nil
   "Inject recent Emacs context into agent-shell prompts."
@@ -200,10 +201,10 @@ under PROJECT-ROOT."
             (with-current-buffer buffer
               (save-excursion
                 (goto-char marker)
-                (push (or (thing-at-point 'symbol t)
-                          (format "[%s:%d]"
-                                  (buffer-name)
-                                  (line-number-at-pos)))
+                (push (format "%s (%s)"
+                              (or (thing-at-point 'symbol t)
+                                  (format "[%d]" (line-number-at-pos)))
+                              (buffer-name))
                       path)))))))
     (when has-eligible-buffer
       (string-join (reverse path) " -> "))))

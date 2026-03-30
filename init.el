@@ -217,7 +217,7 @@
          (dired-mode . (lambda ()
                          (keymap-set dired-mode-map "C-x a i" #'timfel/dired-agent-shell-marked-directories))))
   :bind (("C-x a t" . timfel/agent-shell-tile-buffers-grid)
-         ("C-c C-w" . agent-shell))
+         ("C-x a s" . agent-shell))
   :config
   (setq agent-shell-context-sources
         '(files region error timfel/agent-shell-context-source line))
@@ -1699,11 +1699,15 @@ input means nil arguments."
   :functions (agent-shell-make-environment-variables
               agent-shell-openai-make-authentication
               agent-shell-opencode-make-authentication
+              shell-maker-submit
               oca-key
               oca-codex-login
               timfel/agent-shell-command-prefix-bwrap)
   :commands agent-shell
   :pin melpa
+  :bind (:map agent-shell-mode-map
+         ("RET" . newline)
+         ("C-c RET" . shell-maker-submit))
   :custom
   (agent-shell-busy-indicator-frames 'dots-round)
   (agent-shell-header-style 'text)
