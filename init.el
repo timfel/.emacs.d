@@ -304,7 +304,7 @@
                         (when (file-exists-p filepath)
                           (list (cons :file filepath)
                                 (cons :line (when (cdr match)
-                                              (string-to-number (cdr match)))))))))))
+                                              (string-to-number (cdr match))))))))))))
 
 (use-package lua-mode
   :ensure t
