@@ -179,10 +179,14 @@ agent-shell buffer's project."
         (timfel/agent-shell-context--shell-snippet)
       (timfel/agent-shell-context--lines-around-point))))
 
-(defun timfel/agent-shell-context--format-xref-history (history-list limit)
-  "Format up to LIMIT items from HISTORY-LIST into a readable path."
+(defun timfel/agent-shell-context--format-xref-history (history-list limit project-root)
+  "Format up to LIMIT items from HISTORY-LIST into a readable path.
+
+Return nil unless at least one xref target buffer would qualify for inclusion
+under PROJECT-ROOT."
   (let ((items (seq-take history-list limit))
-        (path '()))
+        (path '())
+        (has-eligible-buffer nil))
     (dolist (item items)
       (let ((marker (cond
                      ((markerp item) item)
@@ -190,15 +194,19 @@ agent-shell buffer's project."
                      ((and (consp item) (markerp (cdr item))) (cdr item))
                      (t nil))))
         (when (and marker (marker-buffer marker))
-          (with-current-buffer (marker-buffer marker)
-            (save-excursion
-              (goto-char marker)
-              (push (or (thing-at-point 'symbol t)
-                        (format "[%s:%d]"
-                                (buffer-name)
-                                (line-number-at-pos)))
-                    path))))))
-    (string-join (reverse path) " -> ")))
+          (let ((buffer (marker-buffer marker)))
+            (when (timfel/agent-shell-context--eligible-buffer-p buffer project-root)
+              (setq has-eligible-buffer t))
+            (with-current-buffer buffer
+              (save-excursion
+                (goto-char marker)
+                (push (or (thing-at-point 'symbol t)
+                          (format "[%s:%d]"
+                                  (buffer-name)
+                                  (line-number-at-pos)))
+                      path)))))))
+    (when has-eligible-buffer
+      (string-join (reverse path) " -> "))))
 
 (defun timfel/agent-shell-context-gather (shell-buffer)
   "Gather recent Emacs context for SHELL-BUFFER that has not already been sent."
@@ -213,10 +221,10 @@ agent-shell buffer's project."
               ,(cond
                 ((or server-use-tcp
                      (memq system-type '(windows-nt ms-dos cygwin)))
-                 (format "--socket-name=%s"
+                 (format "--server-file=%s"
                          (shell-quote-argument (expand-file-name server-name server-auth-dir))))
                 (t
-                 (format "--server-file=%s"
+                 (format "--socket-name=%s"
                          (shell-quote-argument (expand-file-name server-name server-socket-dir))))))
             " "))))
     (catch 'timfel/agent-shell-context-limit-reached
@@ -238,7 +246,8 @@ agent-shell buffer's project."
     (let* ((current-xref (and (boundp 'xref--history)
                               (seq-take xref--history 5)))
            (xref-summary (and current-xref
-                              (timfel/agent-shell-context--format-xref-history current-xref 5))))
+                              (timfel/agent-shell-context--format-xref-history
+                               current-xref 5 project-root))))
       (when (and xref-summary
                  (not (string-empty-p xref-summary))
                  (not (equal xref-summary timfel/agent-shell-context-last-xref-summary)))
