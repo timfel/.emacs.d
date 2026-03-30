@@ -209,15 +209,18 @@
              timfel/magit-diff-comment-region-with-agent-shell
              timfel/agent-shell-recovery-recover-live-set
              timfel/dired-agent-shell-marked-directories
-             timfel/agent-shell-context-mode
+             timfel/agent-shell-context-source
              timfel/agent-shell-tile-buffers-grid)
   :hook ((agent-shell-mode . timfel/agent-shell-recovery-track-live-set)
          (agent-shell-mode . timfel/agent-shell-retry-on-hitting-rate-limit)
          (agent-shell-mode . hack-dir-local-variables-non-file-buffer)
-         (agent-shell-mode . timfel/agent-shell-context-mode)
          (dired-mode . (lambda ()
                          (keymap-set dired-mode-map "C-x a i" #'timfel/dired-agent-shell-marked-directories))))
-  :bind (("C-x a t" . timfel/agent-shell-tile-buffers-grid))
+  :bind (("C-x a t" . timfel/agent-shell-tile-buffers-grid)
+         ("C-c C-w" . agent-shell))
+  :config
+  (setq agent-shell-context-sources
+        '(files region error timfel/agent-shell-context-source line))
   :after timfel)
 
 (use-package timfel-jira-extensions

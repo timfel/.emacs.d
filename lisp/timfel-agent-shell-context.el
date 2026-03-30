@@ -208,27 +208,28 @@ under PROJECT-ROOT."
     (when has-eligible-buffer
       (string-join (reverse path) " -> "))))
 
-(defun timfel/agent-shell-context-gather (shell-buffer)
+(defun timfel/agent-shell-context-source ()
   "Gather recent Emacs context for SHELL-BUFFER that has not already been sent."
-  (let ((context-parts '())
-        (buffers-found 0)
-        (project-root (timfel/agent-shell-context--project-root shell-buffer))
-        (emacsclient-command
-         (when (and (boundp 'server-process)
-                    (process-live-p server-process))
-           (string-join
-            `("emacsclient"
-              ,(cond
-                ((or server-use-tcp
-                     (memq system-type '(windows-nt ms-dos cygwin)))
-                 (format "--server-file=%s"
-                         (shell-quote-argument (expand-file-name server-name server-auth-dir))))
-                (t
-                 (format "--socket-name=%s"
-                         (shell-quote-argument (expand-file-name server-name server-socket-dir))))))
-            " "))))
+  (let* ((shell-buffer (agent-shell--shell-buffer))
+         (context-parts '())
+         (buffers-found 0)
+         (project-root (timfel/agent-shell-context--project-root shell-buffer))
+         (emacsclient-command
+          (when (and (boundp 'server-process)
+                     (process-live-p server-process))
+            (string-join
+             `("emacsclient"
+               ,(cond
+                 ((or server-use-tcp
+                      (memq system-type '(windows-nt ms-dos cygwin)))
+                  (format "--server-file=%s"
+                          (shell-quote-argument (expand-file-name server-name server-auth-dir))))
+                 (t
+                  (format "--socket-name=%s"
+                          (shell-quote-argument (expand-file-name server-name server-socket-dir))))))
+             " "))))
     (catch 'timfel/agent-shell-context-limit-reached
-      (dolist (buffer (buffer-list))
+      (dolist (buffer (seq-subseq (buffer-list) 0 (* 2 timfel/agent-shell-context-buffer-limit)))
         (when (timfel/agent-shell-context--eligible-buffer-p buffer project-root)
           (let* ((name (buffer-name buffer))
                  (state (timfel/agent-shell-context--buffer-state buffer))
@@ -254,35 +255,15 @@ under PROJECT-ROOT."
         (push (format "### Recent Navigation (Xref)\n%s" xref-summary)
               context-parts)
         (setq timfel/agent-shell-context-last-xref-summary xref-summary)))
-    (if context-parts
-        (concat
-         "\n\n[SYSTEM CONTEXT - EMACS STATE]\n"
-         (mapconcat #'identity (nreverse context-parts) "\n\n")
-         (if emacsclient-command
-             (format "\n\nYou can use `%s` to gather more info.\n"
-                     emacsclient-command)
-           "\n")
-         "[END CONTEXT]\n")
-      "")))
-
-(cl-defun timfel/agent-shell-context-inject-advice (orig-fn &rest args &key prompt &allow-other-keys)
-  "Advice ORIG-FN to append recent Emacs context to agent-shell PROMPT.
-Any additional keyword arguments are passed through unchanged."
-  (let ((adjusted-args (copy-sequence args)))
-    (plist-put adjusted-args :prompt
-               (concat prompt
-                       (timfel/agent-shell-context-gather
-                        (plist-get adjusted-args :shell-buffer))))
-    (apply orig-fn adjusted-args)))
-
-(define-minor-mode timfel/agent-shell-context-mode
-  "Toggle injecting recent Emacs context into agent-shell prompts."
-  :global t
-  (if timfel/agent-shell-context-mode
-      (advice-add #'agent-shell--send-command :around
-                  #'timfel/agent-shell-context-inject-advice)
-    (advice-remove #'agent-shell--send-command
-                   #'timfel/agent-shell-context-inject-advice)))
+    (when context-parts
+      (concat
+       "\n\n[USER ENVIRONMENT CONTEXT - EMACS STATE]\n"
+       (mapconcat #'identity (nreverse context-parts) "\n\n")
+       (if emacsclient-command
+           (format "\n\nYou can use `%s` to gather more info.\n"
+                   emacsclient-command)
+         "\n")
+       "[END CONTEXT]\n"))))
 
 (provide 'timfel-agent-shell-context)
 
