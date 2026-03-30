@@ -79,7 +79,7 @@
   (use-short-answers t)
   (fill-column 79)
   (buffer-file-coding-system 'utf-8-unix)
-  (tool-bar-position 'bottom)
+  (tool-bar-position 'top)
   (tool-bar-always-show-default t)
   (tool-bar-button-margin 32)
 
@@ -101,6 +101,9 @@
 
 (use-package android
   :if (eq system-type 'android)
+  :defines (timfel/cloud-storage)
+  :functions (org-capture-kill org-capture-finalize org-capture with-auto-default)
+  :after (timfel)
   :config
   (load-theme 'leuven-dark t)
   (global-visual-line-mode t)
@@ -121,7 +124,8 @@
   (tool-bar-add-item "save" 'save-buffer 'save-buffer)
   (tool-bar-add-item "close" (lambda ()
                                (interactive)
-                               (kill-buffer nil)) 'kb)
+                               (kill-buffer nil))
+                     'kb)
   (define-key-after tool-bar-map [separator-1] menu-bar-separator)
   (tool-bar-add-item "back-arrow" 'undo 'undo)
   (define-key-after tool-bar-map [separator-2] menu-bar-separator)
@@ -132,7 +136,8 @@
                               (org-capture nil "n")
                               (delete-other-windows)
                               (visual-line-mode t)
-                              (text-scale-set +2)) 'oc)
+                              (text-scale-set +2))
+                     'oc)
   :bind
   (("<volume-down>" . (lambda ()
                         (interactive)
@@ -141,7 +146,7 @@
                             ((pred (memq 'org-capture-mode)) ;; save org note
                              (org-capture-finalize)
                              (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
-                             (end-of-buffer))
+                             (goto-char (point-max)))
 
                             ((pred (memq 'org-social-ui-mode)) ;; org-social timeline
                              (with-auto-default (org-social-new-post))
@@ -154,11 +159,7 @@
                              (kill-buffer)
                              (org-social-timeline))
 
-                            (_ ;; default: start a new capture note
-                              (org-capture nil "n")
-                              (delete-other-windows)
-                              (visual-line-mode t)
-                              (text-scale-set +2))))))
+                            (_ nil)))))
    ("<volume-up>" . (lambda ()
                       (interactive)
                       (let ((modes (cons major-mode local-minor-modes)))
@@ -166,16 +167,12 @@
                           ((pred (memq 'org-capture-mode)) ;; abort org note and show prev notes
                            (org-capture-kill)
                            (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
-                           (end-of-buffer))
-
-                          ((pred (memq 'org-social-ui-mode))
-                           (org-social-ui--add-reaction-at-point)) ;; react to org-social post
+                           (goto-char (point-max)))
 
                           ((pred (memq 'org-social-mode)) ;; cancel org social post
                            (kill-buffer))
 
-                          (_ ;; default, open the social timeline
-                           (org-social-timeline))))))))
+                          (_ nil)))))))
 
 (use-package request ;; has not had a release in ages, but bugfixes on master
   :ensure t
@@ -1359,16 +1356,16 @@ input means nil arguments."
   (setq lsp-headerline-arrow ">")
   (defun lsp-goto-next-diagnostic ()
     "Get lsp-diagnostics, it returns a hash mapping file names to a list of
-                hashes, each of which is a diagnostic. Search in the file names for the
-                current buffer's file name. If found, search the list of diagnostics.
-                Get the vallue for the :range key, and compare the :start of the
-                resulting hash with the current point position until we find the next
-                diagnostic that is after the current point. If found, set the point to
-                that next diagnistic's start position. If there are no more diagnistics
-                after the current point in the list, take the next file name from the
-                outer hash. If the file name that got picked is not the current buffer,
-                open the file and position the point at the start of the range of the
-                first hash in the list of diagnistics."
+     hashes, each of which is a diagnostic. Search in the file names for the
+     current buffer's file name. If found, search the list of diagnostics.
+     Get the vallue for the :range key, and compare the :start of the
+     resulting hash with the current point position until we find the next
+     diagnostic that is after the current point. If found, set the point to
+     that next diagnistic's start position. If there are no more diagnistics
+     after the current point in the list, take the next file name from the
+     outer hash. If the file name that got picked is not the current buffer,
+     open the file and position the point at the start of the range of the
+     first hash in the list of diagnistics."
     (interactive)
     (let* ((current-file (or (buffer-file-name) (dired-get-file-for-visit)))
            (diagnostics-table (lsp-diagnostics))

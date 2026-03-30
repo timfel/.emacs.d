@@ -23,6 +23,7 @@
 (require 'subr-x)
 
 (declare-function term-keys/windows-terminal-json "term-keys-windows-terminal")
+(defvar c-basic-offset)
 
 (defgroup timfel nil
   "Tim's local utility functions and commands."
@@ -106,6 +107,7 @@ Non-interactive arguments are Begin End Regexp"
   (interactive)
   ;; if our source file uses tabs, we use tabs, if spaces spaces, and if
   ;; neither, we use the current indent-tabs-mode
+  (require 'cc-mode)
   (let ((space-count (timfel/how-many-region (point-min) (point-max) "^  "))
         (tab-count (timfel/how-many-region (point-min) (point-max) "^\t")))
     (if (> space-count tab-count)
