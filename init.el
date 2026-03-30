@@ -267,6 +267,7 @@
 
 (use-package markdown-mode
   :ensure t
+  :functions (markdown-overlays--parse-local-link)
   :mode ("\\.md$")
   :config
   (setq markdown-command "cmark-gfm --extension table")
