@@ -194,11 +194,36 @@
                 (lambda (original-fn url)
                   "Treat an existing plain local path URL as a local file link."
                   (or (funcall original-fn url)
-                      (let ((filepath (expand-file-name url)))
-                        (when (or (file-exists-p filepath)
-                                  (file-directory-p filepath))
+                      (when (string-match (rx bos "/" alpha ":/") url)
+                        (markdown-overlays--parse-local-link (substring url 1)))
+                      (when-let ((match
+                                  (cond
+                                   ;; path#L123 (GitHub-style line)
+                                   ((string-match
+                                     (rx bos
+                                         (group (? (optional "/") alpha ":/") ;; Windows drive letter
+                                                (one-or-more (not (any ":#"))))
+                                         "#L" (group (one-or-more digit))
+                                         eos)
+                                     url)
+                                    (cons (match-string 1 url) (match-string 2 url)))
+                                   ;; path:123 (colon line number)
+                                   ((string-match
+                                     (rx bos
+                                         (group (? (optional "/") alpha ":/") ;; Windows drive letter
+                                                (one-or-more (not (any ":#"))))
+                                         ":" (group (one-or-more digit))
+                                         eos)
+                                     url)
+                                    (cons (match-string 1 url) (match-string 2 url)))
+                                   ;; plain local path with no line suffix
+                                   ((not (string-empty-p url))
+                                    (cons url nil))))
+                                 (filepath (expand-file-name (car match))))
+                        (when (file-exists-p filepath)
                           (list (cons :file filepath)
-                                (cons :line nil)))))))))
+                                (cons :line (when (cdr match)
+                                              (string-to-number (cdr match)))))))))))
 
 (use-package lua-mode
   :ensure t
