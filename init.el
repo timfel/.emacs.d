@@ -1642,7 +1642,7 @@ input means nil arguments."
                                      :projectName "com.oracle.graal.python"
                                      :port 8000))
 
-  (defun my/setup-java-workspace-dir (&rest _args)
+  (defun my/setup-java-workspace-dir ()
     (unless (lsp-find-workspace 'jdtls nil)
       (if-let* ((p (project-current))
                 (r (project-root p))
@@ -1665,9 +1665,11 @@ input means nil arguments."
             (message (format "Setting Eclipse workspace to %s, session to %s" lsp-java-workspace-dir lsp-session-file))
             (message (format "You may have to adapt %s/.metadata/.plugins/org.eclipse.core.runtime/.settings/org.eclipse.jdt.launching.prefs to give the default VM the name that mx told you" lsp-java-workspace-dir))
             (find-file-noselect (format "%s/.metadata/.plugins/org.eclipse.core.runtime/.settings/org.eclipse.jdt.launching.prefs" lsp-java-workspace-dir))))))
-  (advice-add #'lsp :before #'my/setup-java-workspace-dir)
 
-  (add-hook 'java-mode-hook (lambda () (if (lsp-find-workspace 'jdtls nil) (lsp)))))
+  (add-hook 'java-mode-hook
+            (lambda ()
+              (my/setup-java-workspace-dir)
+              (if (lsp-find-workspace 'jdtls nil) (lsp)))))
 
 (use-package dap-mode
   :ensure t
