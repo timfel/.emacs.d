@@ -148,6 +148,9 @@
                              (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
                              (goto-char (point-max)))
 
+                            ((pred (memq 'vc-dir-mode))
+                             (vc-pull))
+
                             ((pred (memq 'org-social-ui-mode)) ;; org-social timeline
                              (with-auto-default (org-social-new-post))
                              (delete-other-windows)
@@ -168,6 +171,9 @@
                            (org-capture-kill)
                            (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
                            (goto-char (point-max)))
+
+                          ((pred (memq 'vc-dir-mode))
+                           (vc-push))
 
                           ((pred (memq 'org-social-mode)) ;; cancel org social post
                            (kill-buffer))
