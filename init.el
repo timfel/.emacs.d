@@ -101,6 +101,7 @@
 
 (use-package android
   :if (eq system-type 'android)
+  :no-require t
   :defines (timfel/cloud-storage)
   :functions (org-capture-kill org-capture-finalize org-capture with-auto-default)
   :after (timfel)
