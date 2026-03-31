@@ -168,6 +168,9 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                              (when (string-suffix-p dir-locals-file (buffer-file-name))
                                (save-buffer)
                                (kill-buffer)) ;; save .dir-locals.el if it got created/selected now
+                             (add-to-list 'safe-local-variable-values
+                                          (cons "timfel/agent-shell-worktree-parent"
+                                                worktree-parent))
                              (switch-to-buffer buffer)
                              (hack-dir-local-variables-non-file-buffer))))
                        shell-buffer
