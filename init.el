@@ -467,6 +467,8 @@
   (icomplete-show-matches-on-no-input t)
   (completion-flex-nospace nil)
   :config
+  (add-to-list 'completion-ignored-extensions
+               ".lock")
   (setq completion-ignore-case t
         read-buffer-completion-ignore-case t
         read-file-name-completion-ignore-case t)
