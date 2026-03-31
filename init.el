@@ -1052,10 +1052,16 @@
   (gptel-include-tool-results t)
   (gptel-include-reasoning t)
   :config
-  (setq gptel-backend (gptel-make-ollama "Ollama"
-                        :host "localhost:11434"
-                        :stream t
-                        :models '(gemma3n:latest gemma3n-tools)))
+  (gptel-make-ollama "Ollama"
+    :host "localhost:11434"
+    :stream t
+    :models '(gemma3n:latest gemma3n-tools))
+  (gptel-make-openai "llama-cpp"
+    :host "127.0.0.1:8080"
+    :protocol "http"
+    :stream t
+    :models '(TeichAI/Qwen3.5-4B-Claude-Opus-Reasoning-GGUF:Q4_K_M)
+    :key "none")
   (ignore-errors (oca-key))
   (setq
    cashpw/gptel-mode-line--indicator-querying "↑GPTEL↑ "
