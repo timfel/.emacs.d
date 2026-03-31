@@ -134,10 +134,15 @@
   (tool-bar-add-item "refresh" 'revert-buffer 'ost)
   (tool-bar-add-item "new" (lambda ()
                              (interactive)
-                              (org-capture nil "n")
-                              (delete-other-windows)
-                              (visual-line-mode t)
-                              (text-scale-set +2))
+                             (if (derived-mode-p 'org-mode)
+                                 (progn
+                                   (org-capture nil "n")
+                                   (delete-other-windows)
+                                   (visual-line-mode t)
+                                   (text-scale-set +2))
+                               (find-file (expand-file-name
+                                           "SyncFolder/notes.org"
+                                           timfel/cloud-storage))))
                      'oc)
   :bind
   (("<volume-down>" . (lambda ()
