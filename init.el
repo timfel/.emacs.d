@@ -1727,9 +1727,11 @@ input means nil arguments."
   (agent-shell-preferred-agent-config 'codex)
   (agent-shell-show-config-icons nil)
   (agent-shell-show-usage-at-turn-end t)
-  (agent-shell-text-file-capabilities nil)
+  (agent-shell-text-file-capabilities t)
   (agent-shell-command-prefix #'timfel/agent-shell-command-prefix-bwrap)
   :config
+  (keymap-unset agent-shell-mode-map "p")
+  (keymap-unset agent-shell-mode-map "n")
   ;; If any .agents/skills from this repo do not exist in $HOME/.agents/skills/ (Unix) or $Env:USERPROFILE/.agents/skills (Windows)
   ;; then symlink them there
   (let* ((repo-root (locate-user-emacs-file ""))
@@ -2003,6 +2005,8 @@ input means nil arguments."
   (when-let* ((eclipse (expand-file-name "~/dev/eclipse/eclipse"))
               (_ (and (file-exists-p eclipse) (not (getenv "ECLIPSE_EXE")))))
     (setenv "ECLIPSE_EXE" eclipse))
+
+  (server-start nil t)
 
   ;; 100 MiB
   (setq gc-cons-threshold (* 1024 1024 100)))
