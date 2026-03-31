@@ -131,7 +131,7 @@
   (tool-bar-add-item "back-arrow" 'undo 'undo)
   (define-key-after tool-bar-map [separator-2] menu-bar-separator)
   (tool-bar-add-item "home" 'delete-other-windows 'delete-other-windows)
-  (tool-bar-add-item "refresh" 'org-social-timeline 'ost)
+  (tool-bar-add-item "refresh" 'revert-buffer 'ost)
   (tool-bar-add-item "new" (lambda ()
                              (interactive)
                               (org-capture nil "n")
