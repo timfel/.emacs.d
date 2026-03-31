@@ -142,17 +142,25 @@
                                    (text-scale-set +2))
                                (find-file (expand-file-name
                                            "SyncFolder/notes.org"
-                                           timfel/cloud-storage))))
+                                           timfel/cloud-storage))
+                               (goto-char (point-max))))
                      'oc)
   :bind
   (("<volume-down>" . (lambda ()
                         (interactive)
                         (let ((modes (cons major-mode local-minor-modes)))
-                          (pcase modes
+                          (pcase modes                            
                             ((pred (memq 'org-capture-mode)) ;; save org note
                              (org-capture-finalize)
                              (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
                              (goto-char (point-max)))
+
+                            ((pred (memq 'org-mode))
+                             (progn
+                                   (org-capture nil "n")
+                                   (delete-other-windows)
+                                   (visual-line-mode t)
+                                   (text-scale-set +2)))
 
                             ((pred (memq 'vc-dir-mode))
                              (vc-pull))
