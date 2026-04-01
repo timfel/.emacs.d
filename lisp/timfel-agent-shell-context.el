@@ -11,9 +11,6 @@
 (require 'server)
 (require 'subr-x)
 
-(declare-function agent-shell--send-command "agent-shell" (&key prompt shell-buffer))
-(declare-function agent-shell--shell-buffer "agent-shell" (&rest args))
-
 (defgroup timfel-agent-shell-context nil
   "Inject recent Emacs context into agent-shell prompts."
   :group 'tools)
@@ -211,10 +208,9 @@ under PROJECT-ROOT."
 
 (defun timfel/agent-shell-context-source ()
   "Gather recent Emacs context for SHELL-BUFFER that has not already been sent."
-  (let* ((shell-buffer (agent-shell--shell-buffer))
-         (context-parts '())
+  (let* ((context-parts '())
          (buffers-found 0)
-         (project-root (timfel/agent-shell-context--project-root shell-buffer))
+         (project-root (timfel/agent-shell-context--project-root (current-buffer)))
          (emacsclient-command
           (when (and (boundp 'server-process)
                      (process-live-p server-process))

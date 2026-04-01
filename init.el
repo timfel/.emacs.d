@@ -1207,6 +1207,10 @@
                               (vterm t)
                               (add-hook 'kill-buffer-hook #'delete-window 0 t)))
                           (set-window-dedicated-p w t)))))
+         :map vterm-copy-mode-map
+         ("C-x b" . (lambda () (interactive)
+                      (set-window-dedicated-p (selected-window) nil)
+                      (call-interactively #'switch-to-buffer)))
          :map vterm-mode-map
          ("C-x b" . (lambda () (interactive)
                       (set-window-dedicated-p (selected-window) nil)
