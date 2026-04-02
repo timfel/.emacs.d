@@ -231,7 +231,10 @@
          (dired-mode . (lambda ()
                          (keymap-set dired-mode-map "C-x a i" #'timfel/dired-agent-shell-marked-directories))))
   :bind (("C-x a t" . timfel/agent-shell-tile-buffers-grid)
-         ("C-x a s" . agent-shell))
+         ("C-x a s" . (lambda (arg)
+                        (interactive "P")
+                        (let ((agent-shell-session-strategy 'new-deferred))
+                          (agent-shell arg)))))
   :config
   (setq agent-shell-context-sources
         '(files region error timfel/agent-shell-context-source line))
@@ -1749,6 +1752,12 @@ input means nil arguments."
   (agent-shell-text-file-capabilities nil)
   (agent-shell-command-prefix #'timfel/agent-shell-command-prefix-bwrap)
   :config
+  ;; Remove once upstream includes the session strategy snapshot fix.
+  (advice-add 'agent-shell--start :around (lambda (orig-fun &rest args)
+                                            (unless (plist-member args :session-strategy)
+                                              (setq args (append args (list :session-strategy agent-shell-session-strategy))))
+                                            (apply orig-fun args)))
+
   ;; If any .agents/skills from this repo do not exist in $HOME/.agents/skills/ (Unix) or $Env:USERPROFILE/.agents/skills (Windows)
   ;; then symlink them there
   (let* ((repo-root (locate-user-emacs-file ""))
