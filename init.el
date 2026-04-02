@@ -224,6 +224,7 @@
              timfel/agent-shell-recovery-recover-live-set
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-context-source
+             timfel/agent-shell-return-dwim
              timfel/agent-shell-tile-buffers-grid)
   :hook ((agent-shell-mode . timfel/agent-shell-recovery-track-live-set)
          (agent-shell-mode . timfel/agent-shell-retry-on-hitting-rate-limit)
@@ -1733,11 +1734,12 @@ input means nil arguments."
               shell-maker-submit
               oca-key
               oca-codex-login
+              timfel/agent-shell-return-dwim
               timfel/agent-shell-command-prefix-bwrap)
   :commands agent-shell
   :pin melpa
   :bind (:map agent-shell-mode-map
-         ("RET" . newline)
+         ("RET" . timfel/agent-shell-return-dwim)
          ("C-c RET" . shell-maker-submit))
   :custom
   (agent-shell-busy-indicator-frames 'dots-round)

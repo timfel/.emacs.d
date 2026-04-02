@@ -14,6 +14,7 @@
 (require 'timfel-agent-shell-recovery)
 (require 'timfel-agent-shell-ui)
 (require 'timfel-agent-shell-context)
+(require 'timfel-markdown-overlays-extensions)
 
 ;;;###autoload
 (defun timfel/dired-agent-shell-marked-directories ()
