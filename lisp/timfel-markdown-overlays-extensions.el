@@ -12,6 +12,8 @@
 (require 'subr-x)
 
 (declare-function jira-detail-show-issue "jira-detail" (key))
+(declare-function jira-api-call "jira-api" (method endpoint &rest args))
+(declare-function jira-detail--issue "jira-detail" (key data))
 (defvar browse-url-button-regexp)
 
 (defconst timfel/markdown-overlays-jira-issue-regexp
@@ -42,7 +44,17 @@ treated as Jira links when they contain both \"jira\" and a Jira issue key."
       (user-error "No Jira issue key found in %S" text))
     (unless (require 'jira-detail nil t)
       (user-error "jira-detail.el is not available"))
-    (jira-detail-show-issue issue-key)))
+    (cond
+     ((fboundp 'jira-detail-show-issue)
+      (jira-detail-show-issue issue-key))
+     ((and (fboundp 'jira-api-call)
+           (fboundp 'jira-detail--issue))
+      (jira-api-call
+       "GET" (concat "issue/" issue-key)
+       :callback (lambda (data _response)
+                   (jira-detail--issue issue-key data))))
+     (t
+      (user-error "jira-detail is loaded, but no issue-opening entrypoint is available")))))
 
 (defun timfel/markdown-overlays-ret-action-at-point ()
   "Return the command bound to `RET' by an overlay/text keymap at point."
