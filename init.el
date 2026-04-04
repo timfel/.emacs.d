@@ -145,11 +145,15 @@
                                            timfel/cloud-storage))
                                (goto-char (point-max))))
                      'oc)
+  (tool-bar-add-item "info" 'gptel 'gptel)
   :bind
   (("<volume-down>" . (lambda ()
                         (interactive)
                         (let ((modes (cons major-mode local-minor-modes)))
-                          (pcase modes                            
+                          (pcase modes
+                            ((pred (memq 'gptel-mode))
+                             (gptel-send))
+
                             ((pred (memq 'org-capture-mode)) ;; save org note
                              (org-capture-finalize)
                              (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
