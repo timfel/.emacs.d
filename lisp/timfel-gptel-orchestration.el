@@ -73,18 +73,20 @@
   "Return the most relevant current-work context from the Emacs session."
   (let* ((limit (or limit 12))
          (interesting-buffers
-          (thread-last
-            (buffer-list)
-            (seq-filter #'timfel/gptel-orchestration--interesting-buffer-p)
-            (seq-map #'timfel/gptel-orchestration--buffer-summary)
-            (seq-take limit)))
+          (seq-take
+           (thread-last
+             (buffer-list)
+             (seq-filter #'timfel/gptel-orchestration--interesting-buffer-p)
+             (seq-map #'timfel/gptel-orchestration--buffer-summary))
+           limit))
          (agent-shell-summaries
           (when (fboundp 'agent-shell-buffers)
-            (thread-last
-              (agent-shell-buffers)
-              (seq-filter #'buffer-live-p)
-              (seq-map #'timfel/gptel-orchestration--buffer-summary)
-              (seq-take limit)))))
+            (seq-take
+             (thread-last
+               (agent-shell-buffers)
+               (seq-filter #'buffer-live-p)
+               (seq-map #'timfel/gptel-orchestration--buffer-summary))
+             limit))))
     (list :interesting_buffers interesting-buffers
           :agent_shell_buffers agent-shell-summaries
           :recent_agent_shell_directories
@@ -279,7 +281,7 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
              :items (:type string)
              :optional t))
     :category "orchestration"
-    :confirm t
+    :confirm nil
     :include t)
    (gptel-make-tool
     :name "start_worktree_tasks"

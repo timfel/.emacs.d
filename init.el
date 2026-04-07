@@ -1764,6 +1764,7 @@ input means nil arguments."
   :functions (agent-shell-make-environment-variables
               agent-shell-openai-make-authentication
               agent-shell-opencode-make-authentication
+              agent-shell-rename-buffer
               shell-maker-submit
               oca-key
               oca-codex-login
@@ -1773,7 +1774,9 @@ input means nil arguments."
   :pin melpa
   :bind (:map agent-shell-mode-map
          ("RET" . timfel/agent-shell-return-dwim)
-         ("C-c RET" . shell-maker-submit))
+         ("C-c RET" . shell-maker-submit)
+         ("C-x a R" . agent-shell-restart)
+         ("C-x a r" . agent-shell-reload))
   :custom
   (agent-shell-busy-indicator-frames 'dots-round)
   (agent-shell-header-style 'text)
@@ -1826,6 +1829,7 @@ input means nil arguments."
 (use-package agent-shell-attention
   :vc (:url "https://github.com/ultronozm/agent-shell-attention.el" :rev :newest)
   :ensure t
+  :functions (agent-shell-attention-dashboard-refresh)
   :after (agent-shell)
   :bind (("C-x a a" . #'agent-shell-attention-dashboard)
          :map agent-shell-attention-dashboard-mode-map
@@ -1833,7 +1837,14 @@ input means nil arguments."
                   (interactive)
                   (let ((buffer (tabulated-list-get-id)))
                     (if (buffer-live-p buffer)
-                        (kill-buffer buffer))))))
+                        (kill-buffer buffer)))))
+         ("R" . (lambda ()
+                  (interactive)
+                  (if-let ((buffer (tabulated-list-get-id)))
+                      (with-current-buffer buffer
+                        (call-interactively #'agent-shell-rename-buffer))
+                    (message "No live agent-shell buffer on this line"))
+                  (agent-shell-attention-dashboard-refresh))))
   :config
   (agent-shell-attention-mode 1)
   :custom
