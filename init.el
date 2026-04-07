@@ -224,7 +224,8 @@
 
 (use-package timfel-agent-shell-extensions
   :commands (timfel/agent-shell-fan-out-worktrees
-             timfel/magit-diff-comment-region-with-agent-shell
+             timfel/agent-shell-magit-context-source
+             timfel/agent-shell-start-deferred
              timfel/agent-shell-recovery-recover-live-set
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-context-source
@@ -241,13 +242,13 @@
                         (let ((agent-shell-session-strategy 'new)
                               (default-directory (expand-file-name (locate-user-emacs-file ""))))
                           (agent-shell arg))))
-         ("C-x a s" . (lambda (arg)
-                        (interactive "P")
-                        (let ((agent-shell-session-strategy 'new-deferred))
-                          (agent-shell arg)))))
+         ("C-x a s" . timfel/agent-shell-start-deferred))
   :config
   (setq agent-shell-context-sources
-        '(files region error timfel/agent-shell-context-source line))
+        '(files region error
+                timfel/agent-shell-magit-context-source
+                timfel/agent-shell-context-source
+                line))
   :after timfel)
 
 (use-package timfel-jira-extensions
@@ -703,12 +704,18 @@
 (use-package magit
   :unless (memq system-type '(windows-nt android))
   :bind (("C-x C-z" . magit-status)
-         :map magit-diff-mode-map
-         ("C-c c" . timfel/magit-diff-comment-region-with-agent-shell))
+         :map magit-mode-map
+         ("C-x a s" . timfel/agent-shell-start-deferred))
   :ensure t
   :custom
   (magit-auto-revert-tracked-only t)
   :config
+  (defvar-keymap timfel/magit-ctl-x-a-map
+    :doc "Prefix map for `C-x a' in Magit diff sections."
+    "s" #'timfel/agent-shell-start-deferred
+    "a" #'magit-add-change-log-entry
+    "4 a" #'magit-add-change-log-entry-other-window)
+  (keymap-set magit-diff-section-map "C-x a" timfel/magit-ctl-x-a-map)
   (magit-auto-revert-mode))
 
 (use-package all-the-icons
