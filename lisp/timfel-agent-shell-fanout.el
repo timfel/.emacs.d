@@ -19,7 +19,7 @@
   :group 'timfel)
 
 (defun timfel/agent-shell--worktree-base-ref (git-root)
-  "Return the remote ref used as the base for new worktrees in GIT-ROOT."
+  "Return the best available base ref used for new worktrees in GIT-ROOT."
   (let ((default-directory (file-name-as-directory git-root)))
     (cond
      ((zerop (process-file "git" nil nil nil "show-ref" "--verify" "--quiet"
@@ -27,7 +27,16 @@
       "origin/master")
      ((zerop (process-file "git" nil nil nil "show-ref" "--verify" "--quiet"
                            "refs/remotes/origin/main"))
-      "origin/main"))))
+      "origin/main")
+     ((zerop (process-file "git" nil nil nil "show-ref" "--verify" "--quiet"
+                           "refs/heads/master"))
+      "master")
+     ((zerop (process-file "git" nil nil nil "show-ref" "--verify" "--quiet"
+                           "refs/heads/main"))
+      "main")
+     ((zerop (process-file "git" nil nil nil "rev-parse" "--verify" "--quiet"
+                           "HEAD"))
+      "HEAD"))))
 
 (defun timfel/agent-shell--worktrees-create (repo-root title)
   "Create or reuse an agent-shell worktree below REPO-ROOT for TITLE."
@@ -58,7 +67,7 @@
          (base-ref (timfel/agent-shell--worktree-base-ref repo-root)))
 
     (unless base-ref
-      (user-error "Could not find origin/master or origin/main in %s" repo-root))
+      (user-error "Could not find a usable base ref in %s" repo-root))
 
     (if-let ((created-worktrees (timfel/agent-shell--worktrees-create-with-suffix repo-roots base-dir slug nil base-ref)))
         (cdr (car created-worktrees)))))
