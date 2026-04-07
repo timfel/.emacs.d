@@ -237,11 +237,6 @@
          (dired-mode . (lambda ()
                          (keymap-set dired-mode-map "C-x a i" #'timfel/dired-agent-shell-marked-directories))))
   :bind (("C-x a t" . timfel/agent-shell-tile-buffers-grid)
-         ("C-x a m" . (lambda (arg)
-                        (interactive "P")
-                        (let ((agent-shell-session-strategy 'new)
-                              (default-directory (expand-file-name (locate-user-emacs-file ""))))
-                          (agent-shell arg))))
          ("C-x a s" . timfel/agent-shell-start-deferred))
   :config
   (setq agent-shell-context-sources
@@ -1079,7 +1074,9 @@
   :defines (cashpw/gptel-mode-line--indicator-querying
             cashpw/gptel-mode-line--indicator-responding
             cashpw/gptel-show-progress-in-mode-line)
-  :functions (cashpw/gptel-mode-line cashpw/gptel-mode-line--hide-all
+  :functions (timfel/gptel--load-prompt-directive
+              timfel/gptel--prompt-metadata
+              cashpw/gptel-mode-line cashpw/gptel-mode-line--hide-all
               cashpw/gptel-mode-line--indicator gptel-abort)
   :commands (gptel gptel-request)
   :custom
@@ -1204,6 +1201,10 @@
 
 (use-package timfel-gptel-tools
   :after (gptel llm-tool-collection))
+
+(use-package timfel-gptel-orchestration
+  :commands timfel/gptel-open-agents-orchestration
+  :bind (("C-x a m" . timfel/gptel-open-agents-orchestration)))
 
 (use-package emacs-theme-detection
   :ensure t
