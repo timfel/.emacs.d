@@ -1158,26 +1158,42 @@
                       :stream gptel-stream
                       :system "Continue writing until the current control flow is completed or the task described in the last comment is done. Only write code, no markup, no communication, no explanations, do not repeat parts of the request, just continue writing the code."))))
 
-  (setq gptel-directives (let* ((promptdir (expand-file-name "prompts" user-emacs-directory))
-                                (prompt-files (directory-files promptdir t "md$")))
-                           (mapcar (lambda (prompt-file)
-                                     (with-temp-buffer
-                                       (insert-file-contents prompt-file)
-                                       (let ((prompt-description "NO DESCRIPTION"))
-                                         ;; nab the description - single-line descriptions only!
-                                         (goto-char (point-min))
-                                         (when (re-search-forward "#\\+description: \\(.*?\\) *--> *$" nil t)
-                                           (setq prompt-description (match-string 1)))
-                                         ;; remove all comments
-                                         (delete-matching-lines "^ *<!--" (point-min) (point-max))
-                                         (delete-matching-lines "^$" (point-min) (+ 1 (point-min))) ; remove first blank line if exists
-                                         (goto-char (point-min)) ;; not necessary, point is in the midst of comments to start
-                                         ;; return the megillah
-                                         (list
-                                          (intern (file-name-directory prompt-file)) ; gptel-directives key
-                                          prompt-description
-                                          (buffer-substring-no-properties (point-min) (point-max)) ))))
-                                   prompt-files)))
+  (defun timfel/gptel--prompt-metadata (key)
+    "Return prompt metadata KEY from comment headers in the current buffer."
+    (save-excursion
+      (goto-char (point-min))
+      (when (re-search-forward
+             (format "^ *<!-- *#\\+%s: \\(.*?\\) *--> *$" key)
+             nil t)
+        (string-trim (match-string 1)))))
+
+  (defun timfel/gptel--load-prompt-directive (prompt-file)
+    "Load PROMPT-FILE into a single `gptel-directives' entry."
+    (with-temp-buffer
+      (insert-file-contents prompt-file)
+      (let ((prompt-name nil)
+            (prompt-description nil))
+        (setq prompt-name
+              (or (timfel/gptel--prompt-metadata "name")
+                  (file-name-base prompt-file)))
+        (setq prompt-description
+              (or (timfel/gptel--prompt-metadata "description")
+                  "NO DESCRIPTION"))
+        ;; Strip prompt metadata comments before sending the directive text.
+        (goto-char (point-min))
+        (flush-lines "^ *<!--.*--> *$")
+        (goto-char (point-min))
+        (when (looking-at "\n+")
+          (delete-region (point) (match-end 0)))
+        (list
+         (intern prompt-name)
+         prompt-description
+         (buffer-substring-no-properties (point-min) (point-max))))))
+
+  (setq gptel-directives
+        (let* ((promptdir (expand-file-name "prompts" user-emacs-directory))
+               (prompt-files (directory-files promptdir t "\\.md\\'")))
+          (mapcar #'timfel/gptel--load-prompt-directive prompt-files)))
   :bind (("C-x a i" . gptel-send)
          ("C-x a c" . timfel/gptel-complete)))
 
