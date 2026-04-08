@@ -93,7 +93,7 @@
   "Return the enclosing PR section for SECTION, or nil."
   (ci--section-find-type 'ci-pr-entry section))
 
-(defun timfel/ci-dashboard--pr-task (pr &optional section)
+(defun timfel/ci-dashboard--pr-task (pr section prompt)
   "Return a `(TITLE . PROMPT)' pair for reviewing pull request PR."
   (let* ((pr-title (timfel/ci-dashboard--pr-title pr section))
          (pr-url (timfel/ci-dashboard--pr-url pr)))
@@ -101,14 +101,14 @@
      (timfel/ci-dashboard--task-title pr-title pr-url)
      (format
       (concat
-       "Review the CI gates on this pull request.\n\n"
        "PR title: %s\n"
        "PR URL: %s\n\n"
-       "Inspect the current gate state for this PR, identify anything failing "
-       "or blocking, summarize what matters, and propose next actions.")
+       (or prompt (concat "Review the CI gates on this pull request.\n\n"
+                          "Inspect the current gate state for this PR, identify anything failing "
+                          "or blocking, summarize what matters, and propose next actions.")))
       pr-title pr-url))))
 
-(defun timfel/ci-dashboard--job-task (pr job &optional pr-section)
+(defun timfel/ci-dashboard--job-task (pr job pr-section prompt)
   "Return a `(TITLE . PROMPT)' pair for reviewing JOB from pull request PR."
   (let* ((pr-title (timfel/ci-dashboard--pr-title pr pr-section))
          (pr-url (timfel/ci-dashboard--pr-url pr))
@@ -122,16 +122,17 @@
              job-key)
      (format
       (concat
-       "Review this CI job on the pull request under point.\n\n"
        "PR title: %s\n"
        "PR URL: %s\n"
        "Job key: %s\n"
        "Job URL: %s\n\n"
-       "Focus on this job first. Explain its current state, investigate why "
-       "it is failing or noteworthy, and propose the next actions.")
+       (or prompt (concat
+                   "Review this CI job on the pull request under point.\n\n"
+                   "Focus on this job first. Explain its current state, investigate why "
+                   "it is failing or noteworthy, and propose the next actions.")))
       pr-title pr-url job-key job-url))))
 
-(defun timfel/ci-dashboard--task-at-point ()
+(defun timfel/ci-dashboard--task-at-point (prompt)
   "Return the `(TITLE . PROMPT)' pair for the CI dashboard thing at point.
 
 Return nil when point is neither on a pull request nor on a job."
@@ -140,22 +141,23 @@ Return nil when point is neither on a pull request nor on a job."
          (value (and section (oref section value))))
     (pcase type
       ('ci-pr-entry
-       (timfel/ci-dashboard--pr-task value section))
+       (timfel/ci-dashboard--pr-task value section prompt))
       ('ci-dashboard-job
        (when-let ((pr-section (timfel/ci-dashboard--pr-section section)))
-         (timfel/ci-dashboard--job-task (oref pr-section value) value pr-section)))
+         (timfel/ci-dashboard--job-task (oref pr-section value) value pr-section prompt)))
       (_ nil))))
 
 ;;;###autoload
-(defun timfel/ci-dashboard-investigate-with-agent ()
+(defun timfel/ci-dashboard-investigate-with-agent (&optional arg)
   "Fan out an agent-shell worktree review for the PR or job at point."
-  (interactive)
-  (if-let ((task (timfel/ci-dashboard--task-at-point)))
+  (interactive "P")
+  (let ((prompt (if arg (read-from-minibuffer "Prompt: ") nil)))
+    (if-let ((task (timfel/ci-dashboard--task-at-point prompt)))
       (let ((project-root (timfel/ci-dashboard--read-project-root)))
         (unless (require 'timfel-agent-shell-extensions nil t)
           (user-error "timfel-agent-shell-extensions is not available"))
         (timfel/agent-shell-fan-out-worktrees (list task) project-root))
-    (message "Point must be on a pull request or job")))
+    (message "Point must be on a pull request or job"))))
 
 (with-eval-after-load 'emacs-ci
   (bind-key (kbd "C-x a i")

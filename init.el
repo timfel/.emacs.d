@@ -1972,8 +1972,27 @@ input means nil arguments."
 
 (use-package jira
   :ensure t
+  :functions (jira-actions-copy-issues-id-to-clipboard
+              jira-api--get-current-url
+              jira-utils-marked-item)
+  :defines (jira-detail--current-key)
   :commands (jira-api-get-basic-data jira-api-get-users jira-issues)
-  :bind (:map jira-issues-mode-map
+  :bind (:map jira-detail-mode-map
+              ("c" . (lambda (&optional prefix)
+                       (interactive "P")
+                       (when-let ((key jira-detail--current-key))
+                         (jira-actions-copy-issues-id-to-clipboard
+                          (if prefix
+                              key
+                            (concat (jira-api--get-current-url) "/browse/" key))))))
+         :map jira-issues-mode-map
+              ("c" . (lambda (&optional prefix)
+                       (interactive "P")
+                       (when-let ((key (jira-utils-marked-item)))
+                         (jira-actions-copy-issues-id-to-clipboard
+                          (if prefix
+                              key
+                            (concat (jira-api--get-current-url) "/browse/" key))))))
               ("C-x a i" . timfel/jira-issues-investigate-marked-with-agent))
   :config
   (add-to-list 'transient-values
