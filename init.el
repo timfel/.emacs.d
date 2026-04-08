@@ -1461,7 +1461,6 @@ input means nil arguments."
   :hook ((lsp-mode . yas-minor-mode)))
 
 (use-package lsp-mode
-  :preface (setq lsp-use-plists t)
   :defines (lsp-headerline-arrow)
   :functions (c-clear-string-fences c-restore-string-fences
               dired-get-file-for-visit lsp--line-character-to-point
