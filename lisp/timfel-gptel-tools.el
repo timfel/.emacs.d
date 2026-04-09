@@ -213,7 +213,7 @@
 (setq timfel/gptel-tool--collection-tools
       (append (timfel/gptel-tool--make-selected-category-tools
                "filesystem"
-               '("read_file" "list_directory" "create_file" "patch_file" "create_directory"))
+               '("read_file" "list_directory" "create_file" "create_directory"))
               (timfel/gptel-tool--make-selected-category-tools
                "buffers"
                '("view_buffer"))))

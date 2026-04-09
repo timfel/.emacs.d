@@ -24,7 +24,18 @@
                             directory
                           (file-name-directory
                            (directory-file-name
-                            (expand-file-name gitdir default-directory))))))))))
+                            (expand-file-name gitdir default-directory)))))))))
+              (delete-stale-session-dirs ()
+                (let ((cutoff (time-subtract (current-time) (days-to-time 6))))
+                  (dolist (path (directory-files "/tmp" t "\\`bcodex-session"))
+                    (when (and (file-directory-p path)
+                               (time-less-p
+                                (file-attribute-modification-time
+                                 (file-attributes path))
+                                cutoff))
+                      (ignore-errors
+                        (delete-directory path t)))))))
+      (delete-stale-session-dirs)
       (let* ((tmpdir (make-temp-file "/tmp/bcodex-session" t (replace-regexp-in-string "[^[:alnum:]]" "" default-directory)))
              (common-root (git-common-root default-directory))
              (graal-dir (expand-file-name "../graal"))

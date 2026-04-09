@@ -18,6 +18,26 @@
   :type 'string
   :group 'timfel)
 
+(defun timfel/agent-shell--worktree-base-ref (git-root)
+  "Return the best available base ref used for new worktrees in GIT-ROOT."
+  (let ((default-directory (file-name-as-directory git-root)))
+    (cond
+     ((zerop (process-file "git" nil nil nil "show-ref" "--verify" "--quiet"
+                           "refs/remotes/origin/master"))
+      "origin/master")
+     ((zerop (process-file "git" nil nil nil "show-ref" "--verify" "--quiet"
+                           "refs/remotes/origin/main"))
+      "origin/main")
+     ((zerop (process-file "git" nil nil nil "show-ref" "--verify" "--quiet"
+                           "refs/heads/master"))
+      "master")
+     ((zerop (process-file "git" nil nil nil "show-ref" "--verify" "--quiet"
+                           "refs/heads/main"))
+      "main")
+     ((zerop (process-file "git" nil nil nil "rev-parse" "--verify" "--quiet"
+                           "HEAD"))
+      "HEAD"))))
+
 (defun timfel/agent-shell--worktrees-create (repo-root title)
   "Create or reuse an agent-shell worktree below REPO-ROOT for TITLE."
   (let* ((repo-root (expand-file-name repo-root))
@@ -43,12 +63,16 @@
                  (downcase)
                  (replace-regexp-in-string "[^[:alnum:]]+" "-")
                  (replace-regexp-in-string "\\`-+\\|-+\\'" "")))
-         (slug (if (string-empty-p slug) "task" slug)))
+         (slug (if (string-empty-p slug) "task" slug))
+         (base-ref (timfel/agent-shell--worktree-base-ref repo-root)))
 
-    (if-let ((created-worktrees (timfel/agent-shell--worktrees-create-with-suffix repo-roots base-dir slug nil)))
+    (unless base-ref
+      (user-error "Could not find a usable base ref in %s" repo-root))
+
+    (if-let ((created-worktrees (timfel/agent-shell--worktrees-create-with-suffix repo-roots base-dir slug nil base-ref)))
         (cdr (car created-worktrees)))))
 
-(defun timfel/agent-shell--worktree-create (git-root parent-folder branch)
+(defun timfel/agent-shell--worktree-create (git-root parent-folder branch base-ref)
   "Create a worktree and BRANCH from GIT-ROOT under PARENT-FOLDER with a
 filename matching the GIT-ROOT final name.
 
@@ -61,7 +85,7 @@ Return new worktree-dir on success, nil on failure."
       ;; prune old worktrees first
       (process-file "git" nil nil nil "worktree" "prune")
       ;; then make the new worktree
-      (if (zerop (process-file "git" nil nil nil "worktree" "add" "-b" branch worktree-dir "origin/master"))
+      (if (zerop (process-file "git" nil nil nil "worktree" "add" "-b" branch worktree-dir base-ref))
           worktree-dir
         ;; if creating the worktree failed, let's check why
         (if (file-exists-p worktree-dir)
@@ -74,7 +98,7 @@ Return new worktree-dir on success, nil on failure."
                               (agent-shell-buffers))
               worktree-dir))))))
 
-(defun timfel/agent-shell--worktrees-create-with-suffix (repo-roots base-dir slug suffix)
+(defun timfel/agent-shell--worktrees-create-with-suffix (repo-roots base-dir slug suffix base-ref)
   (let* ((parent-folder-for-worktrees
           (expand-file-name (if suffix (format "%s-%02d" slug suffix) slug) base-dir))
          (branch
@@ -86,7 +110,7 @@ Return new worktree-dir on success, nil on failure."
     (let ((created-worktrees
            (seq-filter #'cdr
                        (seq-map (lambda (repo-root)
-                                  (cons repo-root (timfel/agent-shell--worktree-create repo-root parent-folder-for-worktrees branch)))
+                                  (cons repo-root (timfel/agent-shell--worktree-create repo-root parent-folder-for-worktrees branch base-ref)))
                                 repo-roots))))
       (if (= (seq-length created-worktrees) (seq-length repo-roots))
           ;; ok, we got all our worktrees done, return
@@ -97,7 +121,7 @@ Return new worktree-dir on success, nil on failure."
                   (process-file "git" nil nil nil "worktree" "remove" (cdr repo-root-and-new-worktree-dir))
                   (process-file "git" nil nil nil "branch" "-d" branch)))
               created-worktrees)
-        (timfel/agent-shell--worktrees-create-with-suffix repo-roots base-dir slug (1+ (or suffix 0)))))))
+        (timfel/agent-shell--worktrees-create-with-suffix repo-roots base-dir slug (1+ (or suffix 0)) base-ref)))))
 
 ;;;###autoload
 (defun timfel/agent-shell-fan-out-worktrees (task-specs &optional directory)

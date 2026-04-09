@@ -6,6 +6,7 @@
 
 ;;; Code:
 
+(require 'agent-shell)
 (require 'dired)
 (require 'subr-x)
 (require 'timfel-agent-shell-bwrap)
@@ -14,6 +15,14 @@
 (require 'timfel-agent-shell-recovery)
 (require 'timfel-agent-shell-ui)
 (require 'timfel-agent-shell-context)
+(require 'timfel-markdown-overlays-extensions)
+
+;;;###autoload
+(defun timfel/agent-shell-start-deferred (arg)
+  "Start `agent-shell' using the `new-deferred' session strategy."
+  (interactive "P")
+  (let ((agent-shell-session-strategy 'new-deferred))
+    (agent-shell arg)))
 
 ;;;###autoload
 (defun timfel/dired-agent-shell-marked-directories ()

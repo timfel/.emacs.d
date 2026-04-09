@@ -131,23 +131,40 @@
   (tool-bar-add-item "back-arrow" 'undo 'undo)
   (define-key-after tool-bar-map [separator-2] menu-bar-separator)
   (tool-bar-add-item "home" 'delete-other-windows 'delete-other-windows)
-  (tool-bar-add-item "refresh" 'org-social-timeline 'ost)
+  (tool-bar-add-item "refresh" 'revert-buffer 'ost)
   (tool-bar-add-item "new" (lambda ()
                              (interactive)
-                              (org-capture nil "n")
-                              (delete-other-windows)
-                              (visual-line-mode t)
-                              (text-scale-set +2))
+                             (if (derived-mode-p 'org-mode)
+                                 (progn
+                                   (org-capture nil "n")
+                                   (delete-other-windows)
+                                   (visual-line-mode t)
+                                   (text-scale-set +2))
+                               (find-file (expand-file-name
+                                           "SyncFolder/notes.org"
+                                           timfel/cloud-storage))
+                               (goto-char (point-max))))
                      'oc)
+  (tool-bar-add-item "info" 'gptel 'gptel)
   :bind
   (("<volume-down>" . (lambda ()
                         (interactive)
                         (let ((modes (cons major-mode local-minor-modes)))
                           (pcase modes
+                            ((pred (memq 'gptel-mode))
+                             (gptel-send))
+
                             ((pred (memq 'org-capture-mode)) ;; save org note
                              (org-capture-finalize)
                              (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
                              (goto-char (point-max)))
+
+                            ((pred (memq 'org-mode))
+                             (progn
+                                   (org-capture nil "n")
+                                   (delete-other-windows)
+                                   (visual-line-mode t)
+                                   (text-scale-set +2)))
 
                             ((pred (memq 'vc-dir-mode))
                              (vc-pull))
@@ -207,10 +224,12 @@
 
 (use-package timfel-agent-shell-extensions
   :commands (timfel/agent-shell-fan-out-worktrees
-             timfel/magit-diff-comment-region-with-agent-shell
+             timfel/agent-shell-magit-context-source
+             timfel/agent-shell-start-deferred
              timfel/agent-shell-recovery-recover-live-set
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-context-source
+             timfel/agent-shell-return-dwim
              timfel/agent-shell-tile-buffers-grid)
   :hook ((agent-shell-mode . timfel/agent-shell-recovery-track-live-set)
          (agent-shell-mode . timfel/agent-shell-retry-on-hitting-rate-limit)
@@ -218,10 +237,13 @@
          (dired-mode . (lambda ()
                          (keymap-set dired-mode-map "C-x a i" #'timfel/dired-agent-shell-marked-directories))))
   :bind (("C-x a t" . timfel/agent-shell-tile-buffers-grid)
-         ("C-x a s" . agent-shell))
+         ("C-x a s" . timfel/agent-shell-start-deferred))
   :config
   (setq agent-shell-context-sources
-        '(files region error timfel/agent-shell-context-source line))
+        '(files region error
+                timfel/agent-shell-magit-context-source
+                timfel/agent-shell-context-source
+                line))
   :after timfel)
 
 (use-package timfel-jira-extensions
@@ -467,6 +489,8 @@
   (icomplete-show-matches-on-no-input t)
   (completion-flex-nospace nil)
   :config
+  (add-to-list 'completion-ignored-extensions
+               ".lock")
   (setq completion-ignore-case t
         read-buffer-completion-ignore-case t
         read-file-name-completion-ignore-case t)
@@ -675,12 +699,18 @@
 (use-package magit
   :unless (memq system-type '(windows-nt android))
   :bind (("C-x C-z" . magit-status)
-         :map magit-diff-mode-map
-         ("C-c c" . timfel/magit-diff-comment-region-with-agent-shell))
+         :map magit-mode-map
+         ("C-x a s" . timfel/agent-shell-start-deferred))
   :ensure t
   :custom
   (magit-auto-revert-tracked-only t)
   :config
+  (defvar-keymap timfel/magit-ctl-x-a-map
+    :doc "Prefix map for `C-x a' in Magit diff sections."
+    "s" #'timfel/agent-shell-start-deferred
+    "a" #'magit-add-change-log-entry
+    "4 a" #'magit-add-change-log-entry-other-window)
+  (keymap-set magit-diff-section-map "C-x a" timfel/magit-ctl-x-a-map)
   (magit-auto-revert-mode))
 
 (use-package all-the-icons
@@ -1044,7 +1074,9 @@
   :defines (cashpw/gptel-mode-line--indicator-querying
             cashpw/gptel-mode-line--indicator-responding
             cashpw/gptel-show-progress-in-mode-line)
-  :functions (cashpw/gptel-mode-line cashpw/gptel-mode-line--hide-all
+  :functions (timfel/gptel--load-prompt-directive
+              timfel/gptel--prompt-metadata
+              cashpw/gptel-mode-line cashpw/gptel-mode-line--hide-all
               cashpw/gptel-mode-line--indicator gptel-abort)
   :commands (gptel gptel-request)
   :custom
@@ -1123,26 +1155,42 @@
                       :stream gptel-stream
                       :system "Continue writing until the current control flow is completed or the task described in the last comment is done. Only write code, no markup, no communication, no explanations, do not repeat parts of the request, just continue writing the code."))))
 
-  (setq gptel-directives (let* ((promptdir (expand-file-name "prompts" user-emacs-directory))
-                                (prompt-files (directory-files promptdir t "md$")))
-                           (mapcar (lambda (prompt-file)
-                                     (with-temp-buffer
-                                       (insert-file-contents prompt-file)
-                                       (let ((prompt-description "NO DESCRIPTION"))
-                                         ;; nab the description - single-line descriptions only!
-                                         (goto-char (point-min))
-                                         (when (re-search-forward "#\\+description: \\(.*?\\) *--> *$" nil t)
-                                           (setq prompt-description (match-string 1)))
-                                         ;; remove all comments
-                                         (delete-matching-lines "^ *<!--" (point-min) (point-max))
-                                         (delete-matching-lines "^$" (point-min) (+ 1 (point-min))) ; remove first blank line if exists
-                                         (goto-char (point-min)) ;; not necessary, point is in the midst of comments to start
-                                         ;; return the megillah
-                                         (list
-                                          (intern (file-name-directory prompt-file)) ; gptel-directives key
-                                          prompt-description
-                                          (buffer-substring-no-properties (point-min) (point-max)) ))))
-                                   prompt-files)))
+  (defun timfel/gptel--prompt-metadata (key)
+    "Return prompt metadata KEY from comment headers in the current buffer."
+    (save-excursion
+      (goto-char (point-min))
+      (when (re-search-forward
+             (format "^ *<!-- *#\\+%s: \\(.*?\\) *--> *$" key)
+             nil t)
+        (string-trim (match-string 1)))))
+
+  (defun timfel/gptel--load-prompt-directive (prompt-file)
+    "Load PROMPT-FILE into a single `gptel-directives' entry."
+    (with-temp-buffer
+      (insert-file-contents prompt-file)
+      (let ((prompt-name nil)
+            (prompt-description nil))
+        (setq prompt-name
+              (or (timfel/gptel--prompt-metadata "name")
+                  (file-name-base prompt-file)))
+        (setq prompt-description
+              (or (timfel/gptel--prompt-metadata "description")
+                  "NO DESCRIPTION"))
+        ;; Strip prompt metadata comments before sending the directive text.
+        (goto-char (point-min))
+        (flush-lines "^ *<!--.*--> *$")
+        (goto-char (point-min))
+        (when (looking-at "\n+")
+          (delete-region (point) (match-end 0)))
+        (list
+         (intern prompt-name)
+         prompt-description
+         (buffer-substring-no-properties (point-min) (point-max))))))
+
+  (setq gptel-directives
+        (let* ((promptdir (expand-file-name "prompts" user-emacs-directory))
+               (prompt-files (directory-files promptdir t "\\.md\\'")))
+          (mapcar #'timfel/gptel--load-prompt-directive prompt-files)))
   :bind (("C-x a i" . gptel-send)
          ("C-x a c" . timfel/gptel-complete)))
 
@@ -1153,6 +1201,10 @@
 
 (use-package timfel-gptel-tools
   :after (gptel llm-tool-collection))
+
+(use-package timfel-gptel-orchestration
+  :commands timfel/gptel-open-agents-orchestration
+  :bind (("C-x a m" . timfel/gptel-open-agents-orchestration)))
 
 (use-package emacs-theme-detection
   :ensure t
@@ -1180,18 +1232,22 @@
   :defines (vterm-mode-map vterm--process)
   :commands (vterm)
   :unless (memq system-type '(windows-nt android))
-  :bind (("<f12>" . (lambda ()
-                      (interactive)
+  :bind (("<f12>" . (lambda (&optional arg)
+                      (interactive "P")
                       (if-let ((w (get-window-with-predicate (lambda (w) (string-prefix-p "*vterm" (buffer-name (window-buffer w)))))))
                           (select-window w)
                         (let ((w (split-window (selected-window) -18)))
                           (select-window w)
                           (let ((buf (seq-find (lambda (b) (string-prefix-p "*vterm" (or (buffer-name b) ""))) (buffer-list))))
-                            (if buf
+                            (if (and (not arg) buf)
                                 (switch-to-buffer buf)
                               (vterm t)
                               (add-hook 'kill-buffer-hook #'delete-window 0 t)))
                           (set-window-dedicated-p w t)))))
+         :map vterm-copy-mode-map
+         ("C-x b" . (lambda () (interactive)
+                      (set-window-dedicated-p (selected-window) nil)
+                      (call-interactively #'switch-to-buffer)))
          :map vterm-mode-map
          ("C-x b" . (lambda () (interactive)
                       (set-window-dedicated-p (selected-window) nil)
@@ -1238,14 +1294,14 @@
   :if (memq system-type '(windows-nt android))
   :after exec-path-from-shell
   :defer t
-  :bind (("<f12>" . (lambda ()
+  :bind (("<f12>" . (lambda (&optional arg)
                       (interactive)
                       (if-let ((w (get-window-with-predicate (lambda (w) (string-prefix-p "*eshell" (buffer-name (window-buffer w)))))))
                           (select-window w)
                         (let ((w (split-window (selected-window) -18)))
                           (select-window w)
                           (let ((buf (seq-find (lambda (b) (string-prefix-p "*eshell" (or (buffer-name b) ""))) (buffer-list))))
-                            (if buf
+                            (if (and (not arg) buf)
                                 (switch-to-buffer buf)
                               (eshell t)
                               (add-hook 'kill-buffer-hook #'delete-window 0 t)))
@@ -1708,15 +1764,19 @@ input means nil arguments."
   :functions (agent-shell-make-environment-variables
               agent-shell-openai-make-authentication
               agent-shell-opencode-make-authentication
+              agent-shell-rename-buffer
               shell-maker-submit
               oca-key
               oca-codex-login
+              timfel/agent-shell-return-dwim
               timfel/agent-shell-command-prefix-bwrap)
   :commands agent-shell
   :pin melpa
   :bind (:map agent-shell-mode-map
-         ("RET" . newline)
-         ("C-c RET" . shell-maker-submit))
+         ("RET" . timfel/agent-shell-return-dwim)
+         ("C-c RET" . shell-maker-submit)
+         ("C-x a R" . agent-shell-restart)
+         ("C-x a r" . agent-shell-reload))
   :custom
   (agent-shell-busy-indicator-frames 'dots-round)
   (agent-shell-header-style 'text)
@@ -1732,6 +1792,12 @@ input means nil arguments."
   :config
   (keymap-unset agent-shell-mode-map "p")
   (keymap-unset agent-shell-mode-map "n")
+  ;; Remove once upstream includes the session strategy snapshot fix.
+  (advice-add 'agent-shell--start :around (lambda (orig-fun &rest args)
+                                            (unless (plist-member args :session-strategy)
+                                              (setq args (append args (list :session-strategy agent-shell-session-strategy))))
+                                            (apply orig-fun args)))
+
   ;; If any .agents/skills from this repo do not exist in $HOME/.agents/skills/ (Unix) or $Env:USERPROFILE/.agents/skills (Windows)
   ;; then symlink them there
   (let* ((repo-root (locate-user-emacs-file ""))
@@ -1765,6 +1831,7 @@ input means nil arguments."
 (use-package agent-shell-attention
   :vc (:url "https://github.com/ultronozm/agent-shell-attention.el" :rev :newest)
   :ensure t
+  :functions (agent-shell-attention-dashboard-refresh)
   :after (agent-shell)
   :bind (("C-x a a" . #'agent-shell-attention-dashboard)
          :map agent-shell-attention-dashboard-mode-map
@@ -1772,7 +1839,14 @@ input means nil arguments."
                   (interactive)
                   (let ((buffer (tabulated-list-get-id)))
                     (if (buffer-live-p buffer)
-                        (kill-buffer buffer))))))
+                        (kill-buffer buffer)))))
+         ("R" . (lambda ()
+                  (interactive)
+                  (if-let ((buffer (tabulated-list-get-id)))
+                      (with-current-buffer buffer
+                        (call-interactively #'agent-shell-rename-buffer))
+                    (message "No live agent-shell buffer on this line"))
+                  (agent-shell-attention-dashboard-refresh))))
   :config
   (agent-shell-attention-mode 1)
   :custom
