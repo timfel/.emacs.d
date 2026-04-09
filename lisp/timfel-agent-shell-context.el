@@ -223,7 +223,10 @@ under PROJECT-ROOT."
                           (shell-quote-argument (expand-file-name server-name server-auth-dir))))
                  (t
                   (format "--socket-name=%s"
-                          (shell-quote-argument (expand-file-name server-name server-socket-dir))))))
+                          (shell-quote-argument (expand-file-name server-name server-socket-dir)))))
+               ,(if (eq system-type 'windows-nt)
+                    "--eval '(load-file (string ASCII CHAR CODES OF PATH TO ELISP SCRIPT))'"
+                  ""))
              " "))))
     (catch 'timfel/agent-shell-context-limit-reached
       (dolist (buffer (seq-subseq (buffer-list) 0 (* 2 timfel/agent-shell-context-buffer-limit)))
@@ -255,11 +258,23 @@ under PROJECT-ROOT."
     (when context-parts
       (concat
        "\n\n[USER ENVIRONMENT CONTEXT - EMACS STATE]\n"
-       (mapconcat #'identity (nreverse context-parts) "\n\n")
        (if emacsclient-command
-           (format "\n\nYou can use `%s` to gather more info.\n"
-                   emacsclient-command)
+           (concat
+            "FIRST evaluate if some contextual buffers may be relevant "
+            "to this prompt. If so you SHOULD use `" emacsclient-command "` "
+            "to query contents and key map bindings of those buffers, those "
+            "will reveal ways to collect more data before working on the task. "
+            "Many buffers have key bindings that lead to more information, "
+            "to logs, issue comments, history, TODOs, etc.\n"
+            (if (eq system-type 'windows-nt)
+                (concat
+                 "ALWAYS write a temporary script file with the elisp code, "
+                 "that prints output using (princ), this avoids quoting issues. "
+                 "DO NOT write the elisp file using the shell, use your edit "
+                 "tool.\n\n")
+              ""))
          "\n")
+       (mapconcat #'identity (nreverse context-parts) "\n\n")
        "[END CONTEXT]\n"))))
 
 (provide 'timfel-agent-shell-context)

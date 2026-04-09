@@ -1786,9 +1786,11 @@ input means nil arguments."
   (agent-shell-preferred-agent-config 'codex)
   (agent-shell-show-config-icons nil)
   (agent-shell-show-usage-at-turn-end t)
-  (agent-shell-text-file-capabilities nil)
+  (agent-shell-text-file-capabilities t)
   (agent-shell-command-prefix #'timfel/agent-shell-command-prefix-bwrap)
   :config
+  (keymap-unset agent-shell-mode-map "p")
+  (keymap-unset agent-shell-mode-map "n")
   ;; Remove once upstream includes the session strategy snapshot fix.
   (advice-add 'agent-shell--start :around (lambda (orig-fun &rest args)
                                             (unless (plist-member args :session-strategy)
@@ -2095,6 +2097,8 @@ input means nil arguments."
   (when-let* ((eclipse (expand-file-name "~/dev/eclipse/eclipse"))
               (_ (and (file-exists-p eclipse) (not (getenv "ECLIPSE_EXE")))))
     (setenv "ECLIPSE_EXE" eclipse))
+
+  (server-start nil t)
 
   ;; 100 MiB
   (setq gc-cons-threshold (* 1024 1024 100)))
