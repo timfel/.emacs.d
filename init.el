@@ -82,7 +82,6 @@
   (tool-bar-position 'top)
   (tool-bar-always-show-default t)
   (tool-bar-button-margin 32)
-
   :config
   (if (file-exists-p custom-file)
       (load custom-file))
