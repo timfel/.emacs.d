@@ -14,9 +14,18 @@
 
 (defcustom timfel/agent-shell-planning-request
   "Go into planning mode"
-  "Initial request queued before each fan-out agent task."
+  "First line prefixed to each fan-out agent task."
   :type 'string
   :group 'timfel)
+
+(defun timfel/agent-shell--initial-request (task)
+  "Return the initial queued request for TASK."
+  (let ((planning-request (string-trim (or timfel/agent-shell-planning-request "")))
+        (task (string-trim (or task ""))))
+    (cond
+     ((string-empty-p task) nil)
+     ((string-empty-p planning-request) task)
+     (t (concat planning-request "\n" task)))))
 
 (defun timfel/agent-shell--worktree-base-ref (git-root)
   "Return the best available base ref used for new worktrees in GIT-ROOT."
@@ -204,11 +213,11 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                       (when task
                         (run-with-timer
                          (+ 3 (random 4)) nil
-                         (lambda (buffer)
+                         (lambda (buffer initial-request)
                            (with-current-buffer buffer
-                             (agent-shell-queue-request timfel/agent-shell-planning-request)
-                             (agent-shell-queue-request task)))
-                         shell-buffer)))))
+                             (agent-shell-queue-request initial-request)))
+                         shell-buffer
+                         (timfel/agent-shell--initial-request task))))))
                 worktree-dir
                 config
                 (if (or (string-blank-p task) prev-transcripts) nil task))))))
