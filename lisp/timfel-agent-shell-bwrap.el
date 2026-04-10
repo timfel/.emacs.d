@@ -18,13 +18,14 @@
                 (let ((default-directory
                        (file-name-as-directory (expand-file-name directory))))
                   (with-temp-buffer
-                    (when (zerop (process-file "git" nil t nil "rev-parse" "--git-common-dir"))
-                      (let ((gitdir (string-trim (buffer-string))))
-                        (if (string-empty-p gitdir)
-                            directory
-                          (file-name-directory
-                           (directory-file-name
-                            (expand-file-name gitdir default-directory)))))))))
+                    (if (zerop (process-file "git" nil t nil "rev-parse" "--git-common-dir"))
+                        (let ((gitdir (string-trim (buffer-string))))
+                          (if (string-empty-p gitdir)
+                              directory
+                            (file-name-directory
+                             (directory-file-name
+                              (expand-file-name gitdir default-directory)))))
+                      directory))))
               (delete-stale-session-dirs ()
                 (let ((cutoff (time-subtract (current-time) (days-to-time 6))))
                   (dolist (path (directory-files "/tmp" t "\\`bcodex-session"))
