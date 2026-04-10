@@ -30,7 +30,8 @@
 (defconst timfel/gptel-orchestration-tool-names
   '("inspect_current_work_context"
     "open_work_queues"
-    "start_worktree_tasks")
+    "start_worktree_tasks"
+    "evaluate_workspace_elisp")
   "GPTel tool names used by the orchestration preset.")
 
 (defconst timfel/gptel-orchestration-buffer-name "*gptel-agents*"
@@ -69,6 +70,21 @@
         (when (listp value)
           (seq-map #'expand-file-name value))))))
 
+(defun timfel/gptel-orchestration--read-forms-from-string (string)
+  "Read all Lisp forms from STRING and return them as a list."
+  (let ((position 0)
+        forms)
+    (condition-case err
+        (while t
+          (let ((parsed (read-from-string string position)))
+            (setq forms (cons (car parsed) forms)
+                  position (cdr parsed))))
+      (end-of-file
+       (unless (string-match-p "\\`[[:space:]\n\r\t]*\\'"
+                               (substring string position))
+         (signal (car err) (cdr err)))))
+    (nreverse forms)))
+
 (defun timfel/gptel-tool-inspect-current-work-context (&optional limit)
   "Return the most relevant current-work context from the Emacs session."
   (let* ((limit (or limit 12))
@@ -91,6 +107,18 @@
           :agent_shell_buffers agent-shell-summaries
           :recent_agent_shell_directories
           (timfel/gptel-orchestration--read-live-agent-shell-set))))
+
+(defun timfel/gptel-tool-evaluate-workspace-elisp (code)
+  "Evaluate one or more Elisp forms from CODE in the live Emacs workspace."
+  (let* ((forms (timfel/gptel-orchestration--read-forms-from-string code))
+         (last-value nil))
+    (unless forms
+      (user-error "No Elisp forms provided"))
+    (dolist (form forms)
+      (setq last-value (eval form t)))
+    (list :ok t
+          :forms_evaluated (length forms)
+          :result (prin1-to-string last-value))))
 
 (defun timfel/gptel-orchestration--open-jira ()
   "Open Tim's Jira work queue and return a summary plist."
@@ -304,6 +332,18 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
              :optional t))
     :category "orchestration"
     :confirm t
+    :include t)
+   (gptel-make-tool
+    :name "evaluate_workspace_elisp"
+    :function #'timfel/gptel-tool-evaluate-workspace-elisp
+    :description
+    "Evaluate Elisp directly in the live Emacs workspace and return the printed value of the last form. Use this to inspect and read buffers or query editor state when the built-in orchestration tools are not enough. IMPORTANT: This runs arbitrary Elisp in the user's Emacs session; confirmation is required."
+    :args (list
+           '(:name "code"
+             :type string
+             :description "One or more Elisp forms to evaluate in the live Emacs session."))
+    :category "orchestration"
+    :confirm t
     :include t))
   "GPTel tools that map directly to Tim's AGENTS.md orchestration workflow.")
 
@@ -317,7 +357,7 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
 
 (gptel-make-preset
  'agents-orchestration
- :description "Use Emacs-native orchestration tools for current work, work queues, and starting agent-shell tasks."
+ :description "Use Emacs-native orchestration tools for current work, work queues, worktree task startup, and direct live-workspace Elisp evaluation."
  :system 'agents-orchestration
  :tools timfel/gptel-orchestration-tool-names
  :use-tools t)
