@@ -7,8 +7,9 @@
 
 (defun timfel/agent-shell-unstick--rate-limit-p (event)
   "Return non-nil when TEXT looks like a 429 / rate-limit failure."
-  (let ((code (map-elt event :code))
-        (text (map-elt event :message)))
+  (let* ((data (or (map-elt event :data) event))
+         (code (map-elt data :code))
+         (text (map-elt data :message)))
     (or (= code 429)
         (and text
              (string-match-p
