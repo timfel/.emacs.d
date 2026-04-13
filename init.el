@@ -105,7 +105,6 @@
   :functions (org-capture-kill org-capture-finalize org-capture with-auto-default)
   :after (timfel)
   :config
-  (load-theme 'leuven-dark t)
   (global-visual-line-mode t)
   (setq visual-line-fringe-indicators
         '(left-curly-arrow right-curly-arrow))
@@ -875,6 +874,7 @@
 
 (use-package eclipse-theme
   :ensure t
+  :disabled
   :unless (eq system-type 'android)
   :config
   (load-theme 'eclipse t))
@@ -2031,6 +2031,10 @@ input means nil arguments."
 (use-package custom
   :defines (wl-copy-process)
   :config
+  (if (eq system-type 'android)
+      (load-theme 'leuven-dark t)
+    (load-theme 'leuven))
+
   (set-fontset-font
    t
    'emoji
