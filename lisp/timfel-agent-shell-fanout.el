@@ -133,7 +133,7 @@ Return new worktree-dir on success, nil on failure."
         (timfel/agent-shell--worktrees-create-with-suffix repo-roots base-dir slug (1+ (or suffix 0)) base-ref)))))
 
 ;;;###autoload
-(defun timfel/agent-shell-fan-out-worktrees (task-specs &optional directory)
+(defun timfel/agent-shell-fan-out-worktrees (task-specs &optional directory session-strategy)
   "Create one worktree-backed `agent-shell' per entry in TASK-SPECS.
 
 TASK-SPECS is an alist of `(TITLE . TASK)' pairs. If a TITLE is an
@@ -145,7 +145,7 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
   (let* ((titles (mapcar #'car task-specs))
          (needs-repo-root (not (seq-every-p #'file-name-absolute-p titles)))
          (directory (file-name-as-directory (expand-file-name (or directory default-directory))))
-         (agent-shell-session-strategy 'latest)
+         (agent-shell-session-strategy (or session-strategy 'latest))
          (config (copy-alist (agent-shell--resolve-preferred-config)))
          (repo-root (when needs-repo-root
                       (let ((default-directory directory))
@@ -161,9 +161,6 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
 
     (unless config
       (user-error "No preferred agent-shell config is available"))
-
-    ;; they consult it asynchronously, so we have not a chance
-    (setq agent-shell-session-strategy 'latest)
 
     (cl-loop for (title-or-dir . task) in task-specs
              for i from 3 by 3
@@ -185,6 +182,7 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                 i nil
                 (lambda (worktree-dir config task)
                   (let ((default-directory worktree-dir)
+                        (agent-shell-session-strategy (or session-strategy 'latest))
                         (agent-shell-cwd-function (lambda () worktree-dir)))
                     (when-let ((shell-buffer (agent-shell-start :config config)))
                       ;; apply the dir-local variables and ensure we persist the worktree-parent

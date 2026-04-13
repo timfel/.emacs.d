@@ -245,7 +245,7 @@ Return a plist describing whether anything was created."
         (zerop (process-file "git" nil nil nil "rev-parse" "--verify" "--quiet"
                              "HEAD")))))
 
-(defun timfel/gptel-tool-start-worktree-tasks (tasks &optional directory)
+(defun timfel/gptel-tool-start-worktree-tasks (tasks &optional directory resume-p)
   "Prompt for a work directory when needed and fan out TASKS there."
   (unless (require 'timfel-agent-shell-extensions nil t)
     (user-error "timfel-agent-shell-extensions is not available"))
@@ -269,7 +269,7 @@ Return a plist describing whether anything was created."
                            "the repository needs a base branch or commit first")
                    directory))
                 (list (cons directory (cdar task-specs))))))))
-    (timfel/agent-shell-fan-out-worktrees effective-task-specs directory)
+    (timfel/agent-shell-fan-out-worktrees effective-task-specs directory (if resume-p 'latest 'new))
     (list :ok t
           :directory directory
           :used_worktrees used-worktrees
@@ -344,6 +344,10 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
            '(:name "directory"
              :type string
              :description "Optional repository or project directory. When omitted, Emacs prompts interactively."
+             :optional t)
+           '(:name "resume_previous_session"
+             :type boolean
+             :description "Optional flag to select if this should resume a previous session if any (the default), or if this is a new task."
              :optional t))
     :category "orchestration"
     :confirm t
