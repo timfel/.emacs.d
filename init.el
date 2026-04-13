@@ -417,6 +417,26 @@
 (use-package org-tempo
   :after org)
 
+(use-package org-tree-slide
+  :after org
+  :ensure t
+  :functions (org-fold-show-all
+              org-tree-slide-mode
+              org-tree-slide-move-next-tree
+              org-tree-slide-move-previous-tree
+              org-tree-slide-content)
+  :defines (org-tree-slide-mode-map)
+  :bind (:map org-mode-map
+         ("<f5>" . org-tree-slide-mode)
+         :map org-tree-slide-mode-map
+         ("<f5>" . (lambda ()
+                     (interactive)
+                     (org-tree-slide-mode 0)
+                     (org-fold-show-all)))
+         ("C-<f5>" . org-tree-slide-content)
+         ("C-<right>" . org-tree-slide-move-next-tree)
+         ("C-<left>" . org-tree-slide-move-previous-tree)))
+
 (use-package ox-gfm
   :ensure t
   :after org)
