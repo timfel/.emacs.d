@@ -190,6 +190,17 @@
              (timfel/gptel-orchestration--task-prompt task)))
      items)))
 
+(defun timfel/gptel-orchestration--use-explicit-directory-task-specs-p (task-specs directory explicit-directory-p)
+  "Return non-nil when TASK-SPECS should target DIRECTORY directly.
+
+When EXPLICIT-DIRECTORY-P is non-nil, this tool should treat the
+directory as the task-spec title so `timfel/agent-shell-fan-out-worktrees'
+starts the task in that exact directory."
+  (when explicit-directory-p
+    (when (> (length task-specs) 1)
+      (user-error "Cannot start multiple tasks directly in %s" directory))
+    t))
+
 (defun timfel/gptel-orchestration--default-work-root ()
   "Return the most sensible default root for starting work."
   (seq-find #'file-directory-p
@@ -238,22 +249,26 @@ Return a plist describing whether anything was created."
   "Prompt for a work directory when needed and fan out TASKS there."
   (unless (require 'timfel-agent-shell-extensions nil t)
     (user-error "timfel-agent-shell-extensions is not available"))
-  (let* ((task-specs (timfel/gptel-orchestration--normalize-task-specs tasks))
+  (let* ((explicit-directory-p (and directory (not (string-blank-p directory))))
+         (task-specs (timfel/gptel-orchestration--normalize-task-specs tasks))
          (directory (expand-file-name
-                     (or (and directory (not (string-blank-p directory)) directory)
+                     (or (and explicit-directory-p directory)
                          (timfel/gptel-orchestration--read-work-directory))))
          (repo-state (timfel/gptel-orchestration--ensure-git-repo directory))
          (used-worktrees (timfel/gptel-orchestration--worktree-capable-p directory))
          (effective-task-specs
-          (if used-worktrees
-              task-specs
-            (progn
-              (when (> (length task-specs) 1)
-                (user-error
-                 (concat "Cannot fan out multiple tasks from %s yet; "
-                         "the repository needs a base branch or commit first")
-                 directory))
-              (list (cons directory (cdar task-specs)))))))
+          (if (timfel/gptel-orchestration--use-explicit-directory-task-specs-p
+               task-specs directory explicit-directory-p)
+              (list (cons directory (cdar task-specs)))
+            (if used-worktrees
+                task-specs
+              (progn
+                (when (> (length task-specs) 1)
+                  (user-error
+                   (concat "Cannot fan out multiple tasks from %s yet; "
+                           "the repository needs a base branch or commit first")
+                   directory))
+                (list (cons directory (cdar task-specs))))))))
     (timfel/agent-shell-fan-out-worktrees effective-task-specs directory)
     (list :ok t
           :directory directory
@@ -315,7 +330,7 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
     :name "start_worktree_tasks"
     :function #'timfel/gptel-tool-start-worktree-tasks
     :description
-    "Start one or more agent-shell tasks. If no directory is provided, this prompts with `read-directory-name` using the prompt `work where: `. When the chosen directory does not exist, it is created and initialized with git. Use this instead of driving the workflow through emacsclient."
+    "Start one or more agent-shell tasks. If no directory is provided, this prompts with `read-directory-name` using the prompt `work where: `. When an explicit directory is provided, a single task starts directly in that absolute directory."
     :args (list
            '(:name "tasks"
              :type array
