@@ -1210,7 +1210,7 @@
         (let* ((promptdir (expand-file-name "prompts" user-emacs-directory))
                (prompt-files (directory-files promptdir t "\\.md\\'")))
           (mapcar #'timfel/gptel--load-prompt-directive prompt-files)))
-  :bind (("C-x a i" . gptel-send)
+  :bind (("C-x a i" . gptel)
          ("C-x a c" . timfel/gptel-complete)))
 
 (use-package llm-tool-collection
