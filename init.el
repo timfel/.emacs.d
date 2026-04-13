@@ -426,6 +426,15 @@
               org-tree-slide-move-previous-tree
               org-tree-slide-content)
   :defines (org-tree-slide-mode-map)
+  :commands org-tree-slide-mode
+  :config
+  (setq org-tree-slide-header t)
+  (setq org-tree-slide-slide-in-effect (display-graphic-p))
+  (setq org-tree-slide-heading-emphasis nil)
+  (setq org-tree-slide-cursor-init nil)
+  (setq org-tree-slide-modeline-display 'outside)
+  (setq org-tree-slide-skip-done nil)
+  (setq org-tree-slide-skip-comments t)
   :bind (:map org-mode-map
          ("<f5>" . org-tree-slide-mode)
          :map org-tree-slide-mode-map
