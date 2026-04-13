@@ -950,6 +950,9 @@
   :unless (display-graphic-p)
   :vc (:url "https://github.com/timfel/sixel-graphics.el" :branch "main" :rev :newest)
   :config
+  (when (getenv "WT_SESSION")
+    (setq sixel-graphics-cell-width 10
+          sixel-graphics-cell-height 20))
   (if (eq system-type 'windows-nt)
       ;; uses https://github.com/trackd/Sixel, installed via Install-Module Sixel
       (let* ((script-dir (locate-user-emacs-file "bin/"))
