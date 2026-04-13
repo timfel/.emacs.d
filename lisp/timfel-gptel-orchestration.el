@@ -315,7 +315,7 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
     :name "start_worktree_tasks"
     :function #'timfel/gptel-tool-start-worktree-tasks
     :description
-    "Start one or more agent-shell tasks using Tim's AGENTS.md workflow. If no directory is provided, this prompts with `read-directory-name` using the prompt `work where: `. When the chosen directory does not exist, it is created and initialized with git. Use this instead of driving the workflow through emacsclient."
+    "Start one or more agent-shell tasks. If no directory is provided, this prompts with `read-directory-name` using the prompt `work where: `. When the chosen directory does not exist, it is created and initialized with git. Use this instead of driving the workflow through emacsclient."
     :args (list
            '(:name "tasks"
              :type array
