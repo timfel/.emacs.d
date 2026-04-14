@@ -461,7 +461,7 @@
                                               (executable-find "python3")
                                               (expand-file-name "~/dotfiles/bin/wslscr.py %s"))
                                     (expand-file-name "~/bin/wslscr.py %s")))
-  (org-download-image-dir (expand-file-name "Screenshots/" timfel/cloud-storage)))
+  (org-download-image-dir "./Screenshots/"))
 
 (use-package imenu
   :custom
