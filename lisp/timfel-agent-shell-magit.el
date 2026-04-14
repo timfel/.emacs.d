@@ -48,7 +48,7 @@ If the region is active, it has to stay inside a single hunk body."
 
 ;;;###autoload
 (defun timfel/agent-shell-magit-context-source ()
-  "Return the current Magit hunk as `agent-shell' context, or nil."
+  "Return the current Git diff hunk as `agent-shell' context, or nil."
   (when-let* ((section (timfel/agent-shell-magit--selected-hunk))
               (patch (string-trim-right
                       (timfel/agent-shell-magit--region-context section))))
