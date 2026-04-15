@@ -89,6 +89,19 @@
     (format "%s/projects/G/repos/%s/pull-requests/%s"
             ci-dashboard-base-url to-slug pr-id)))
 
+(defun timfel/ci-dashboard--pr-branch (pr)
+  "Return the source branch name for pull request PR."
+  (let* ((merge-job (alist-get 'mergeJob pr))
+         (pull-request (or (alist-get 'pullRequest pr)
+                           (alist-get 'pullRequest merge-job)))
+         (from-ref (or (alist-get 'fromRef pull-request)
+                       (alist-get 'request merge-job)))
+         (branch (or (alist-get 'displayId from-ref)
+                     (alist-get 'fromBranch from-ref))))
+    (unless branch
+      (user-error "Could not determine pull request branch at point"))
+    branch))
+
 (defun timfel/ci-dashboard--pr-section (section)
   "Return the enclosing PR section for SECTION, or nil."
   (ci--section-find-type 'ci-pr-entry section))
@@ -96,6 +109,7 @@
 (defun timfel/ci-dashboard--pr-task (pr section prompt)
   "Return a `(TITLE . PROMPT)' pair for reviewing pull request PR."
   (let* ((pr-title (timfel/ci-dashboard--pr-title pr section))
+         (branch (timfel/ci-dashboard--pr-branch pr))
          (pr-url (timfel/ci-dashboard--pr-url pr)))
     (cons
      (timfel/ci-dashboard--task-title pr-title pr-url)
@@ -103,15 +117,18 @@
       (concat
        "PR title: %s\n"
        "PR URL: %s\n\n"
+       "Branch: %s\n"
+       "Switch to branch `%s` first before doing anything else.\n\n"
        (or prompt (concat "Review the CI gates on this pull request.\n\n"
                           "Inspect the current gate state for this PR, identify anything failing "
                           "or blocking, summarize what matters, and propose next actions.")))
-      pr-title pr-url))))
+      pr-title pr-url branch branch))))
 
 (defun timfel/ci-dashboard--job-task (pr job pr-section prompt)
   "Return a `(TITLE . PROMPT)' pair for reviewing JOB from pull request PR."
   (let* ((pr-title (timfel/ci-dashboard--pr-title pr pr-section))
          (pr-url (timfel/ci-dashboard--pr-url pr))
+         (branch (timfel/ci-dashboard--pr-branch pr))
          (job-key (or (alist-get 'key job)
                       (user-error "Job at point is missing a key")))
          (job-url (or (alist-get 'url job)
@@ -124,13 +141,22 @@
       (concat
        "PR title: %s\n"
        "PR URL: %s\n"
+       "Branch: %s\n"
        "Job key: %s\n"
        "Job URL: %s\n\n"
-       (or prompt (concat
-                   "Review this CI job on the pull request under point.\n\n"
-                   "Focus on this job first. Explain its current state, investigate why "
-                   "it is failing or noteworthy, and propose the next actions.")))
-      pr-title pr-url job-key job-url))))
+       "Switch to branch `%s` first before doing anything else.\n\n"
+       "%s")
+      pr-title
+      pr-url
+      branch
+      job-key
+      job-url
+      branch
+      (or prompt
+          (concat
+           "Review this CI job on the pull request under point.\n\n"
+           "Focus on this job first. Explain its current state, investigate why "
+           "it is failing or noteworthy, and propose the next actions."))))))
 
 (defun timfel/ci-dashboard--task-at-point (prompt)
   "Return the `(TITLE . PROMPT)' pair for the CI dashboard thing at point.
