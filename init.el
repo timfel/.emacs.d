@@ -470,7 +470,9 @@
   :bind (("C-." . imenu)))
 
 (use-package eldoc
-  :custom (eldoc-documentation-strategy #'eldoc-documentation-compose)
+  :custom
+  (eldoc-documentation-strategy #'eldoc-documentation-compose)
+  (eldoc-echo-area-prefer-doc-buffer t)
   :functions (eldoc-display-in-buffer-at-point)
   :bind (([remap display-local-help] . timfel/local-help-or-doc))
   :config
@@ -478,6 +480,7 @@
     (interactive)
     (unless (display-local-help t)
       (call-interactively #'eldoc-print-current-symbol-info)))
+  (setq eldoc-display-functions '(eldoc-display-in-echo-area eldoc-display-in-buffer))
   (remove-hook 'eldoc-display-functions #'eldoc-display-in-buffer)
   (remove-hook 'eldoc-display-functions #'eldoc-display-in-buffer-at-point)
   (add-hook 'eldoc-display-functions #'eldoc-display-in-echo-area))
