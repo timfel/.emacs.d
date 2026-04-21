@@ -734,19 +734,24 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
               "#+END:"))
        "\n"))))
 
+(defun timfel/org-visit-agent-shell (dir)
+  (let ((default-directory dir))
+    (call-interactively #'agent-shell)))
+
 (defun timfel/org-capture-dwim ()
   "Return capture content based on the original source buffer."
   (interactive)
   (let ((capture-buffer (current-buffer)))
-    (run-with-idle-timer 1 nil
-                         (lambda (buf)
-                           (message "Refreshing block")
-                           (when (buffer-live-p buf)
-                             (with-current-buffer buf
-                               (when (derived-mode-p 'org-mode)
-                                 (ignore-errors
-                                   (org-update-all-dblocks))))))
-                         capture-buffer)
+    (when (called-interactively-p)
+      (run-with-idle-timer 1 nil
+                           (lambda (buf)
+                             (message "Refreshing block")
+                             (when (buffer-live-p buf)
+                               (with-current-buffer buf
+                                 (when (derived-mode-p 'org-mode)
+                                   (ignore-errors
+                                     (org-update-all-dblocks))))))
+                           capture-buffer))
     (let ((result
            (with-current-buffer (timfel/org-capture--original-buffer)
              (save-excursion
@@ -759,6 +764,11 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
                  (or (timfel/org-ci--capture-string
                       (timfel/ci-dashboard--pr-data-at-point))
                      ""))
+                ((derived-mode-p 'agent-shell-mode)
+                 (org-link-make-string
+                  (concat "elisp:"
+                          (prin1-to-string `(timfel/org-visit-agent-shell ,default-directory)))
+                  (concat "Agent Shell in " (abbreviate-file-name default-directory))))
                 ((use-region-p)
                  (or (timfel/org-capture--active-region-string)
                      ""))
@@ -768,7 +778,13 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
                  (timfel/org-capture--context-snippet 10)))))))
       (when (called-interactively-p)
         (message "Copied to kill ring")
-        (kill-new result))
+        (kill-new
+         (concat
+          (org-link-make-string
+           (concat "file:" (abbreviate-file-name default-directory))
+           (file-name-nondirectory (directory-file-name default-directory)))
+          "\n"
+          result)))
       result)))
 
 (provide 'timfel-org)

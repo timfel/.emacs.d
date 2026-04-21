@@ -374,6 +374,7 @@
          ("o" . other-window) ;; because I clobbered the other window command
          ("a" . org-agenda)
          ("c" . org-capture)
+         ("g" . org-dblock-update)
          :map org-mode-map
          ("C-c <right>" . org-shiftright)
          ("C-c <left>" . org-shiftleft)
@@ -387,7 +388,9 @@
    (concat
     "^(jira-detail-show-issue \"[^\"]+\")$"
     "\\|"
-    "^(timfel/ci-dashboard-show-pr \"[^\"]+\" \"[^\"]+\" [0-9]+)$"))
+    "^(timfel/ci-dashboard-show-pr \"[^\"]+\" \"[^\"]+\" [0-9]+)$"
+    "\\|"
+    "^(timfel/org-visit-agent-shell \"[^\"]+\")$"))
   (org-return-follows-link t)
   (org-file-apps '((auto-mode . emacs)
                    ("\\.mm\\'" . default)
@@ -405,6 +408,8 @@
                                 (tags priority-down category-keep)
                                 (search category-keep)))
   (org-insert-mode-line-in-empty-file t)
+  (org-refile-targets `(((,(expand-file-name "SyncFolder/todo.org" timfel/cloud-storage))
+                         . (:regexp . ,(rx (= 4 num) "-" (= 2 num) "-" (= 2 num) (+ space) (+ word))))))
   (org-adapt-indentation nil "do not shift lower items")
   (org-hide-leading-stars t "i like this more")
   (org-priority-highest ?A)
@@ -482,7 +487,9 @@
   :after org)
 
 (use-package timfel-org
-  :after org)
+  :after org
+  :bind (:map ctl-x-o-map
+         ("k" . timfel/org-capture-dwim)))
 
 (use-package org-download
   :ensure t
