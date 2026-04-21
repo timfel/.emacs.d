@@ -20,6 +20,7 @@
 ;; years and that I find useful in my Emacs usage.
 
 (require 'cl-lib)
+(require 'json)
 (require 'subr-x)
 
 (declare-function term-keys/windows-terminal-json "term-keys-windows-terminal")

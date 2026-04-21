@@ -411,7 +411,16 @@
   (org-agenda-files (list (expand-file-name "SyncFolder/todo.org" timfel/cloud-storage)
                           (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage)))
   (org-capture-templates
-   `(("n" "note"
+   `(("t" "todo"
+      entry (file+olp+datetree ,(expand-file-name "SyncFolder/todo.org" timfel/cloud-storage))
+      ,(string-join '("* TODO %?"
+                      ":Created: %T"
+                      "  %(timfel/org-capture-dwim)"
+                      "  %a")
+                    "\n")
+      :empty-lines 0
+      :tree-type :week)
+     ("n" "note"
       entry (file+olp+datetree ,(expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
       "* %?\nEntered on %U\n")
      ("m" "meeting"
@@ -462,6 +471,9 @@
 
 (use-package ox-gfm
   :ensure t
+  :after org)
+
+(use-package timfel-org
   :after org)
 
 (use-package org-download
