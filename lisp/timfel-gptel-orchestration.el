@@ -27,13 +27,6 @@
   (locate-user-emacs-file ".agent-shell/live-agent-shell-set.el")
   "Location of the persisted live agent-shell directory set.")
 
-(defconst timfel/gptel-orchestration-tool-names
-  '("inspect_current_work_context"
-    "open_work_queues"
-    "start_worktree_tasks"
-    "evaluate_workspace_elisp")
-  "GPTel tool names used by the orchestration preset.")
-
 (defconst timfel/gptel-orchestration-buffer-name "*gptel-agents*"
   "Default buffer name for the AGENTS.md orchestration chat.")
 
@@ -277,6 +270,22 @@ Return a plist describing whether anything was created."
           :initialized_git (plist-get repo-state :initialized_git)
           :tasks_started (length effective-task-specs))))
 
+(defun timfel/gptel-tool-bitbucket (argv)
+  (condition-case err
+      (let* ((cmd (string-join (append '("gdev-cli" "bitbucket") (mapcar #'shell-quote-argument argv)) " ")))
+        (list :ok t
+              :command cmd
+              :output (shell-command-to-string cmd)))
+    (error "bitbucket arguments must be a list of strings")))
+
+(defun timfel/gptel-tool-jira (argv)
+  (condition-case err
+      (let* ((cmd (string-join (append '("gdev-cli" "jira") (mapcar #'shell-quote-argument argv)) " ")))
+        (list :ok t
+              :command cmd
+              :output (shell-command-to-string cmd)))
+    (error "jira arguments must be a list of strings")))
+
 ;;;###autoload
 (defun timfel/gptel-open-agents-orchestration (&optional new-buffer)
   "Open a gptel chat buffer configured for the AGENTS.md orchestration flow.
@@ -297,7 +306,7 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
          (set (make-local-variable sym) val))))
     buffer))
 
-(defvar timfel/gptel-orchestration-tools
+(setq timfel/gptel-orchestration-tools
   (list
    (gptel-make-tool
     :name "inspect_current_work_context"
@@ -353,6 +362,24 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
     :confirm t
     :include t)
    (gptel-make-tool
+    :name "bitbucket"
+    :function #'timfel/gptel-tool-bitbucket
+    :confirm t
+    :include t
+    :category "orchestration"
+    :description
+    "A CLI tool to access bitbucket. It has subcommands and the argument is passed as argv"
+    :args '((:name "argv" :type array :description "arguments to pass" :items (:type string))))
+   (gptel-make-tool
+    :name "jira"
+    :function #'timfel/gptel-tool-jira
+    :confirm t
+    :include t
+    :category "orchestration"
+    :description
+    "A CLI tool to access Jira. It has subcommand and the argument is passed as argv"
+    :args '((:name "argv" :type array :description "arguments to pass" :items (:type string))))
+   (gptel-make-tool
     :name "evaluate_workspace_elisp"
     :function #'timfel/gptel-tool-evaluate-workspace-elisp
     :description
@@ -363,22 +390,13 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
              :description "One or more Elisp forms to evaluate in the live Emacs session."))
     :category "orchestration"
     :confirm t
-    :include t))
-  "GPTel tools that map directly to Tim's AGENTS.md orchestration workflow.")
-
-(setq gptel-tools
-      (append
-       (cl-remove-if
-        (lambda (tool)
-          (member (gptel-tool-name tool) timfel/gptel-orchestration-tool-names))
-        gptel-tools)
-       timfel/gptel-orchestration-tools))
+    :include t)))
 
 (gptel-make-preset
  'agents-orchestration
  :description "Use Emacs-native orchestration tools for current work, work queues, worktree task startup, and direct live-workspace Elisp evaluation."
  :system 'agents-orchestration
- :tools timfel/gptel-orchestration-tool-names
+ :tools (mapcar #'gptel-tool-name timfel/gptel-orchestration-tools)
  :use-tools t)
 
 (provide 'timfel-gptel-orchestration)
