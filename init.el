@@ -371,7 +371,7 @@
   :bind (:map ctl-x-map
          ("o" . ctl-x-o-map)
          :map ctl-x-o-map
-         ("w" . other-window) ;; because I clobbered the other window command
+         ("o" . other-window) ;; because I clobbered the other window command
          ("a" . org-agenda)
          ("c" . org-capture)
          :map org-mode-map
@@ -410,9 +410,23 @@
   (org-clock-idle-time 15)
   (org-agenda-files (list (expand-file-name "SyncFolder/todo.org" timfel/cloud-storage)
                           (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage)))
-  (org-capture-templates `(("n" "note" entry
-                             (file+olp+datetree ,(expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
-                             "* %?\nEntered on %U\n"))))
+  (org-capture-templates
+   `(("n" "note"
+      entry (file+olp+datetree ,(expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
+      "* %?\nEntered on %U\n")
+     ("m" "meeting"
+      entry (file+olp+datetree ,(expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
+      ,(string-join '("* %? :meeting:"
+                      ":Created: %T"
+                      "** Who"
+                      "*** "
+                      "** Notes"
+                      "** Action Items"
+                     "*** TODO [#A] ")
+                    "\n")
+      :clock-in t
+      :clock-resume t
+      :empty-lines 0))))
 
 (use-package org-tempo
   :after org)
