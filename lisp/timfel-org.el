@@ -36,6 +36,7 @@
 (declare-function org-capture-get "org-capture" (property &optional local))
 (declare-function org-end-of-subtree "org" (&optional invisible-ok to-heading))
 (declare-function org-entry-get "org" (pom property &optional inherit literal-nil))
+(declare-function org-update-all-dblocks "org" (&optional arg))
 (defvar ci-dashboard-base-url)
 (defvar jira-detail--current)
 (defvar jira-detail--current-key)
@@ -47,9 +48,6 @@
   "Keep Jira and CI refresh payloads for this many seconds."
   :type 'integer
   :group 'timfel)
-
-(defvar timfel/org--pending-capture-refresh nil
-  "Refresh kind to run after the current capture finalizes.")
 
 (defvar timfel/org-jira--cache (make-hash-table :test #'equal)
   "Cached Jira issue payloads.")
@@ -65,26 +63,11 @@
 
 (defun timfel/org-capture--original-buffer ()
   "Return the original buffer for the current capture, or current buffer."
-  (if (fboundp 'org-capture-get)
-      (or (ignore-errors (org-capture-get :original-buffer))
-          (current-buffer))
-    (current-buffer)))
-
-(defun timfel/org-capture--properties-block (properties)
-  "Return an Org properties block for PROPERTIES.
-PROPERTIES is an alist of `(NAME . VALUE)' entries."
-  (let ((entries (seq-filter (lambda (entry)
-                               (cdr entry))
-                             properties)))
-    (if (null entries)
-        ""
-      (concat
-       ":PROPERTIES:\n"
-       (mapconcat (lambda (entry)
-                    (format ":%s: %s" (car entry) (cdr entry)))
-                  entries
-                  "\n")
-       "\n:END:\n"))))
+  (let ((original (and (fboundp 'org-capture-get)
+                       (ignore-errors (org-capture-get :original-buffer)))))
+    (if (buffer-live-p original)
+        original
+      (current-buffer))))
 
 (defun timfel/org-capture--line-bounds-around-point (&optional lines)
   "Return `(START . END)' around point spanning LINES on each side."
@@ -204,14 +187,6 @@ PROPERTIES is an alist of `(NAME . VALUE)' entries."
   (cond
    ((derived-mode-p 'jira-detail-mode)
     (timfel/org--data-get-in jira-detail--current 'fields 'status 'name))
-   ((derived-mode-p 'jira-issues-mode)
-    (let ((line (buffer-substring-no-properties
-                 (line-beginning-position)
-                 (line-end-position))))
-      (when (string-match
-             "^\\s-*\\S-+\\s-+\\S-+\\s-+\\([A-Z][A-Z ]*[A-Z]\\)\\s-+\\S-"
-             line)
-        (match-string 1 line))))
    (t nil)))
 
 (defun timfel/org-jira--seed-at-point ()
@@ -222,11 +197,6 @@ PROPERTIES is an alist of `(NAME . VALUE)' entries."
           :status (timfel/org-jira--status-at-point)
           :issue (and (derived-mode-p 'jira-detail-mode)
                       jira-detail--current))))
-
-(defun timfel/org-jira--open-link (key)
-  "Return an Org elisp link for Jira issue KEY."
-  (format "[[elisp:%s][Open]]"
-          (prin1-to-string `(jira-detail-show-issue ,key))))
 
 (defun timfel/org-jira--format-doc (doc)
   "Return DOC formatted as readable Jira text."
@@ -266,15 +236,6 @@ PROPERTIES is an alist of `(NAME . VALUE)' entries."
                            (timfel/org--data-get comment 'body))))
                (timfel/org--insert-list-item (format "- %s: " author) body)))
          (insert "No comments.\n"))))))
-
-(defun timfel/org-jira--render-placeholder (key title status)
-  "Return placeholder Org text for Jira KEY, TITLE, and STATUS."
-  (timfel/org--render-to-string
-   (lambda ()
-     (insert (format "_%s_ %s\n\n"
-                     (or status "Unknown")
-                     (or title key)))
-     (insert "Refreshing Jira details asynchronously...\n"))))
 
 (defun timfel/org-jira--with-issue (key callback)
   "Call CALLBACK with Jira issue KEY asynchronously.
@@ -377,19 +338,6 @@ CALLBACK receives `(ISSUE ERROR)'."
          #'timfel/ci-dashboard--focus-pr
          project repo pr-id (1- retries)))))))
 
-(defun timfel/org-ci--open-link (project repo pr-id)
-  "Return an Org elisp link for PROJECT, REPO, and PR-ID."
-  (format "[[elisp:%s][Open]]"
-          (prin1-to-string `(timfel/ci-dashboard-show-pr
-                             ,project ,repo ,pr-id))))
-
-(defun timfel/org--extract-json-text (stdout)
-  "Return the JSON payload embedded in STDOUT."
-  (when stdout
-    (if-let ((start (string-match "[[{]" stdout)))
-        (substring stdout start)
-      stdout)))
-
 (defun timfel/org--call-process-json-async (program args callback)
   "Call PROGRAM with ARGS asynchronously and parse JSON.
 CALLBACK receives a plist `(:ok DATA)' or `(:error MESSAGE)'."
@@ -413,7 +361,8 @@ CALLBACK receives a plist `(:ok DATA)' or `(:error MESSAGE)'."
                                           (buffer-string)))
                                 (stderr (with-current-buffer stderr-buffer
                                           (buffer-string)))
-                                (json-text (timfel/org--extract-json-text stdout)))
+                                (json-text (if-let ((start (string-match "[[{]" (or stdout ""))))
+                                               (substring stdout start))))
                            (if (zerop status)
                                (condition-case err
                                    (list :ok
@@ -551,14 +500,10 @@ CALLBACK receives a plist `(:ok DATA)' or `(:error MESSAGE)'."
         (timfel/org--hash-get-any anchor '("text" "body")))
       "Unnamed task"))
 
-(defun timfel/org-ci--cache-key (project repo pr-id)
-  "Return cache key for PROJECT, REPO, and PR-ID."
-  (format "%s/%s/%s" project repo pr-id))
-
 (defun timfel/org-ci--fetch-data-async (project repo pr-id callback)
   "Fetch build, comment, and task data for PROJECT, REPO, and PR-ID.
 CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
-  (let* ((request-key (timfel/org-ci--cache-key project repo pr-id))
+  (let* ((request-key (format "%s/%s/%s" project repo pr-id))
          (cached (timfel/org--cache-get timfel/org-ci--cache request-key)))
     (if cached
         (funcall callback cached)
@@ -605,13 +550,6 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
                      "-p" project "-r" repo "-pr" (format "%s" pr-id) "--json")
                (lambda (result)
                  (finish-one :tasks result))))))))))
-
-(defun timfel/org-ci--render-placeholder (pr-id title)
-  "Return placeholder Org text for PR-ID and TITLE."
-  (timfel/org--render-to-string
-   (lambda ()
-     (insert (format "_PR %s_ %s\n\n" pr-id (or title "Pull request")))
-     (insert "Refreshing CI details asynchronously...\n"))))
 
 (defun timfel/org-ci--render-data (pr-id title payloads)
   "Return Org text for PR-ID and TITLE using PAYLOADS."
@@ -668,24 +606,6 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
        (when-let ((error (plist-get builds :error)))
          (insert (format "\nBuild refresh note: %s\n" error)))))))
 
-(defun timfel/org--dblock-line-params ()
-  "Return plist of params on the current `#+BEGIN:' line."
-  (let ((line (buffer-substring-no-properties
-               (line-beginning-position)
-               (line-end-position))))
-    (with-temp-buffer
-      (insert (replace-regexp-in-string "^[ \t]*#\\+BEGIN:[ \t]+[^ \t]+" "" line))
-      (goto-char (point-min))
-      (let (plist)
-        (condition-case nil
-            (while t
-              (skip-chars-forward " \t")
-              (let ((key (read (current-buffer))))
-                (skip-chars-forward " \t")
-                (setq plist (plist-put plist key (read (current-buffer))))))
-          (end-of-file plist))
-        plist))))
-
 (defun timfel/org--replace-dblock-contents (begin-marker content)
   "Replace the dynamic block at BEGIN-MARKER with CONTENT."
   (when-let ((buffer (marker-buffer begin-marker)))
@@ -702,25 +622,6 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
                           content
                         (concat content "\n"))))))))))
 
-(defun timfel/org--refresh-dblocks-in-current-scope (name fn)
-  "Refresh all dynamic blocks called NAME in the current scope using FN."
-  (let ((limit (save-excursion
-                 (if (org-before-first-heading-p)
-                     (point-max)
-                   (org-end-of-subtree t t)))))
-    (save-excursion
-      (beginning-of-line)
-      (while (re-search-forward
-              (format "^[ \t]*#\\+BEGIN: %s\\b" (regexp-quote name))
-              limit
-              t)
-        (goto-char (match-beginning 0))
-        (funcall fn (point-marker) (timfel/org--dblock-line-params))
-        (setq limit (save-excursion
-                      (if (org-before-first-heading-p)
-                          (point-max)
-                        (org-end-of-subtree t t))))))))
-
 (defun timfel/org-jira--refresh-block-at (begin-marker params)
   "Refresh Jira dynamic block at BEGIN-MARKER using PARAMS."
   (let* ((key (or (plist-get params :key)
@@ -730,19 +631,16 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
          (status (or (plist-get params :status)
                      (plist-get params 'status))))
     (when key
-      (timfel/org--replace-dblock-contents
-       begin-marker
-       (timfel/org-jira--render-placeholder key title status))
       (timfel/org-jira--with-issue
        key
        (lambda (issue error)
          (timfel/org--replace-dblock-contents
           begin-marker
-          (if issue
-              (timfel/org-jira--render-issue issue key)
-            (format "Could not load Jira issue %s.\n%s\n"
-                    key
-                    (or error "Unknown Jira error")))))))))
+          (concat
+           (format "[[elisp:%s][Open]]\n" (prin1-to-string `(jira-detail-show-issue ,key)))
+           (if issue
+               (timfel/org-jira--render-issue issue key)
+             (format "Could not load Jira issue %s.\n%s\n" key (or error "Unknown Jira error"))))))))))
 
 (defun timfel/org-ci--refresh-block-at (begin-marker params)
   "Refresh CI dynamic block at BEGIN-MARKER using PARAMS."
@@ -755,70 +653,27 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
          (title (or (plist-get params :title)
                     (plist-get params 'title))))
     (when (and project repo pr-id)
-      (timfel/org--replace-dblock-contents
-       begin-marker
-       (timfel/org-ci--render-placeholder pr-id title))
       (timfel/org-ci--fetch-data-async
        project repo pr-id
        (lambda (payloads)
          (timfel/org--replace-dblock-contents
           begin-marker
-          (timfel/org-ci--render-data pr-id title payloads)))))))
+          (concat
+           (format "[[elisp:%s][Open]]\n" (prin1-to-string `(timfel/ci-dashboard-show-pr ,project ,repo ,pr-id)))
+           (timfel/org-ci--render-data pr-id title payloads))))))))
 
 (defun org-dblock-write:timfel-jira (params)
-  "Write a Jira placeholder dynamic block using PARAMS."
   (let ((key (plist-get params :key))
         (title (plist-get params :title))
         (status (plist-get params :status))
         (begin-marker (point-marker)))
-    (insert (timfel/org-jira--render-placeholder key title status))
     (timfel/org-jira--refresh-block-at begin-marker params)))
 
 (defun org-dblock-write:timfel-ci (params)
-  "Write a CI placeholder dynamic block using PARAMS."
   (let ((pr-id (plist-get params :pr))
         (title (plist-get params :title))
         (begin-marker (point-marker)))
-    (insert (timfel/org-ci--render-placeholder pr-id title))
     (timfel/org-ci--refresh-block-at begin-marker params)))
-
-(defun timfel/org-jira-update ()
-  "Refresh Jira dynamic blocks in the current subtree or buffer."
-  (interactive)
-  (timfel/org--refresh-dblocks-in-current-scope
-   "timfel-jira"
-   #'timfel/org-jira--refresh-block-at))
-
-(defun timfel/org-ci-update ()
-  "Refresh CI dynamic blocks in the current subtree or buffer."
-  (interactive)
-  (timfel/org--refresh-dblocks-in-current-scope
-   "timfel-ci"
-   #'timfel/org-ci--refresh-block-at))
-
-(defun timfel/org--refresh-entry-at-marker (marker kind)
-  "Refresh captured entry at MARKER for KIND."
-  (when-let ((buffer (marker-buffer marker)))
-    (with-current-buffer buffer
-      (save-excursion
-        (goto-char marker)
-        (pcase kind
-          ('jira (timfel/org-jira-update))
-          ('ci (timfel/org-ci-update)))))))
-
-(defun timfel/org-capture--after-finalize ()
-  "Kick off asynchronous refresh for the most recent capture."
-  (when timfel/org--pending-capture-refresh
-    (unwind-protect
-        (when (and (boundp 'org-capture-last-stored-marker)
-                   org-capture-last-stored-marker
-                   (marker-buffer org-capture-last-stored-marker))
-          (let ((marker (copy-marker org-capture-last-stored-marker))
-                (kind timfel/org--pending-capture-refresh))
-            (run-at-time 0 nil #'timfel/org--refresh-entry-at-marker marker kind)))
-      (setq timfel/org--pending-capture-refresh nil))))
-
-(add-hook 'org-capture-after-finalize-hook #'timfel/org-capture--after-finalize)
 
 (defun timfel/org-capture-dwim-title ()
   "Return a context-specific title prefix for Org capture."
@@ -848,31 +703,22 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
 (defun timfel/org-jira--capture-string (seed)
   "Return the capture payload for Jira issue SEED."
   (when-let ((key (plist-get seed :key)))
-    (setq timfel/org--pending-capture-refresh 'jira)
     (let ((title (plist-get seed :title))
           (status (plist-get seed :status))
           (issue (plist-get seed :issue)))
       (string-join
        (delq nil
              (list
-              (string-trim-right
-               (timfel/org-capture--properties-block
-                `(("JIRA_KEY" . ,key))))
               (timfel/org-jira--open-link key)
               ""
               (format "#+BEGIN: timfel-jira :key %S :title %S :status %S"
                       key title status)
-              (string-trim-right
-               (if issue
-                   (timfel/org-jira--render-issue issue key)
-                 (timfel/org-jira--render-placeholder key title status)))
               "#+END:"))
        "\n"))))
 
 (defun timfel/org-ci--capture-string (pr-data)
   "Return the capture payload for PR-DATA."
   (when pr-data
-    (setq timfel/org--pending-capture-refresh 'ci)
     (let ((project (plist-get pr-data :project))
           (repo (plist-get pr-data :repo))
           (pr-id (plist-get pr-data :pr))
@@ -881,38 +727,49 @@ CALLBACK receives one plist with `:builds', `:comments', and `:tasks'."
       (string-join
        (delq nil
              (list
-              (string-trim-right
-               (timfel/org-capture--properties-block
-                `(("PULL_REQUEST" . ,url))))
               (timfel/org-ci--open-link project repo pr-id)
               ""
               (format "#+BEGIN: timfel-ci :project %S :repo %S :pr %S :title %S"
                       project repo pr-id title)
-              (string-trim-right
-               (timfel/org-ci--render-placeholder pr-id title))
               "#+END:"))
        "\n"))))
 
 (defun timfel/org-capture-dwim ()
   "Return capture content based on the original source buffer."
-  (with-current-buffer (timfel/org-capture--original-buffer)
-    (save-excursion
-      (cond
-       ((derived-mode-p 'jira-issues-mode 'jira-detail-mode)
-        (or (timfel/org-jira--capture-string
-             (timfel/org-jira--seed-at-point))
-            ""))
-       ((derived-mode-p 'ci-dashboard-mode)
-        (or (timfel/org-ci--capture-string
-             (timfel/ci-dashboard--pr-data-at-point))
-            ""))
-       ((use-region-p)
-        (or (timfel/org-capture--active-region-string)
-            ""))
-       ((buffer-file-name)
-        "")
-       (t
-        (timfel/org-capture--context-snippet 10))))))
+  (interactive)
+  (let ((capture-buffer (current-buffer)))
+    (run-with-idle-timer 1 nil
+                         (lambda (buf)
+                           (message "Refreshing block")
+                           (when (buffer-live-p buf)
+                             (with-current-buffer buf
+                               (when (derived-mode-p 'org-mode)
+                                 (ignore-errors
+                                   (org-update-all-dblocks))))))
+                         capture-buffer)
+    (let ((result
+           (with-current-buffer (timfel/org-capture--original-buffer)
+             (save-excursion
+               (cond
+                ((derived-mode-p 'jira-issues-mode 'jira-detail-mode)
+                 (or (timfel/org-jira--capture-string
+                      (timfel/org-jira--seed-at-point))
+                     ""))
+                ((derived-mode-p 'ci-dashboard-mode)
+                 (or (timfel/org-ci--capture-string
+                      (timfel/ci-dashboard--pr-data-at-point))
+                     ""))
+                ((use-region-p)
+                 (or (timfel/org-capture--active-region-string)
+                     ""))
+                ((buffer-file-name)
+                 "")
+                (t
+                 (timfel/org-capture--context-snippet 10)))))))
+      (when (called-interactively-p)
+        (message "Copied to kill ring")
+        (kill-new result))
+      result)))
 
 (provide 'timfel-org)
 
