@@ -381,7 +381,13 @@
   :custom
   (org-image-actual-width (list 600))
   (org-log-done 'time)
-  (org-link-elisp-skip-confirm-regexp "^(jira-detail-show-issue \"[^\"]+\")$")
+  (org-export-backends '(ascii md html latex odt confluence))
+  (org-hide-emphasis-markers t)
+  (org-link-elisp-skip-confirm-regexp
+   (concat
+    "^(jira-detail-show-issue \"[^\"]+\")$"
+    "\\|"
+    "^(timfel/ci-dashboard-show-pr \"[^\"]+\" \"[^\"]+\" [0-9]+)$"))
   (org-return-follows-link t)
   (org-file-apps '((auto-mode . emacs)
                    ("\\.mm\\'" . default)
@@ -409,6 +415,7 @@
                        (?C . (:foreground "OliveDrab"))))
   (org-agenda-window-setup 'current-window)
   (org-clock-idle-time 15)
+
   (org-agenda-files (list (expand-file-name "SyncFolder/todo.org" timfel/cloud-storage)
                           (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage)))
   (org-capture-templates
