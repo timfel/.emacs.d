@@ -381,6 +381,7 @@
   :custom
   (org-image-actual-width (list 600))
   (org-log-done 'time)
+  (org-link-elisp-skip-confirm-regexp "^(jira-detail-show-issue \"[^\"]+\")$")
   (org-return-follows-link t)
   (org-file-apps '((auto-mode . emacs)
                    ("\\.mm\\'" . default)
@@ -413,7 +414,7 @@
   (org-capture-templates
    `(("t" "todo"
       entry (file+olp+datetree ,(expand-file-name "SyncFolder/todo.org" timfel/cloud-storage))
-      ,(string-join '("* TODO %?"
+      ,(string-join '("* TODO %(timfel/org-capture-dwim-title)%?"
                       ":Created: %T"
                       "  %(timfel/org-capture-dwim)"
                       "  %a")
