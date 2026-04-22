@@ -1832,6 +1832,8 @@ input means nil arguments."
               agent-shell-openai-make-authentication
               agent-shell-opencode-make-authentication
               agent-shell-rename-buffer
+              org-link-set-parameters
+              org-link-store-props
               shell-maker-submit
               oca-key
               oca-codex-login
@@ -1857,6 +1859,28 @@ input means nil arguments."
   (agent-shell-text-file-capabilities t)
   (agent-shell-command-prefix #'timfel/agent-shell-command-prefix-bwrap)
   :config
+
+  (defun timfel/org-open-agent-shell-link (directory _)
+    (let ((default-directory (file-name-as-directory
+                              (expand-file-name directory))))
+      (call-interactively #'agent-shell)))
+
+  (defun timfel/org-store-agent-shell-link (&optional _interactive?)
+    (when (derived-mode-p 'agent-shell-mode)
+      (let* ((directory (file-name-as-directory (expand-file-name default-directory)))
+             (link (concat "agent-shell:" directory))
+             (description (format "agent shell in %s"
+                                  (abbreviate-file-name directory))))
+        (org-link-store-props
+         :type "agent-shell"
+         :link link
+         :description description)
+        link)))
+  (org-link-set-parameters
+   "agent-shell"
+   :follow #'timfel/org-open-agent-shell-link
+   :store #'timfel/org-store-agent-shell-link)
+
   (keymap-unset agent-shell-mode-map "p")
   (keymap-unset agent-shell-mode-map "n")
   ;; Remove once upstream includes the session strategy snapshot fix.
