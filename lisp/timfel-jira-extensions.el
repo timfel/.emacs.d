@@ -252,7 +252,10 @@ With a prefix argument, prompt for DAYS.  DAYS defaults to 90."
   (jira-api-get-statuses)
   (jira-api-get-resolutions)
   (jira-api-get-projects)
-  (funcall-interactively #'jira-issues))
+  (let ((b (current-buffer)))
+    (jira-issues)
+    (switch-to-buffer b))
+  (switch-to-buffer-other-window "*Jira Issues*"))
 
 (provide 'timfel-jira-extensions)
 

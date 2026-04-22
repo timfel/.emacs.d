@@ -207,7 +207,33 @@
 
 (use-package emacs-ci
   :after timfel
-  :commands ci-dashboard)
+  :commands ci-dashboard
+  :config
+  (with-eval-after-load 'org
+    (defun timfel/org-store-ci-link ()
+      (when-let* ((section (magit-current-section))
+                  (typ (oref section type))
+                  (val (oref section value))
+                  (url (cond ((eq typ 'ci-dashboard-job)
+                              (alist-get 'url job))
+                             ((eq typ 'ci-pr-entry)
+                              (when-let* ((mrg (alist-get 'mergeJob val))
+                                          (prv (or (alist-get 'pullRequest val) (alist-get 'pullRequest mrg)))
+                                          (to-ref (alist-get 'toRef prv))
+                                          (to-repo (alist-get 'repository to-ref))
+                                          (to-slug (alist-get 'slug to-repo))
+                                          (pr-id (alist-get 'id prv)))
+                                (format "bitbucket:projects/G/repos/%s/pull-requests/%s" to-slug pr-id))))))
+        (org-link-store-props :type "bitbucket" :link url :description url)
+        url))
+
+    (defun timfel/org-follow-ci-link (url)
+      (browse-url (format "%s/%s" ci-dashboard-base-url url)))
+
+    (org-link-set-parameters
+     "bitbucket"
+     :follow #'timfel/org-follow-ci-link
+     :store #'timfel/org-store-ci-link)))
 
 (use-package timfel-ci-extensions
   :after (timfel emacs-ci))
@@ -386,7 +412,11 @@
     "\\|"
     "^(timfel/ci-dashboard-show-pr \"[^\"]+\" \"[^\"]+\" [0-9]+)$"
     "\\|"
-    "^(timfel/org-visit-agent-shell \"[^\"]+\")$"
+    "^(browse-url-default-browser \"slack:[^\"]+\")$"
+    "\\|"
+    "^(timfel/jira)$"
+    "\\|"
+    "^(ci-dashboard)$"
     "\\|"
     "^(let ((default-directory \"[^\"]+\")) (call-interactively #'agent-shell))$"))
   (org-return-follows-link t)
@@ -423,9 +453,10 @@
                           (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage)))
   (org-capture-templates
    `(("t" "todo"
-      entry (file+olp+datetree ,(expand-file-name "SyncFolder/todo.org" timfel/cloud-storage))
+      entry (file ,(expand-file-name "SyncFolder/todo.org" timfel/cloud-storage))
       ,(string-join '("* TODO %i%?"
                       ":Created: %T"
+                      ":DEADLINE: %(org-insert-time-stamp (org-read-date nil t \"+7d\"))"
                       "  %a")
                     "\n")
       :empty-lines 0
@@ -437,8 +468,6 @@
       entry (file+olp+datetree ,(expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
       ,(string-join '("* %? :meeting:"
                       ":Created: %T"
-                      "** Who"
-                      "*** "
                       "** Notes"
                       "** Action Items"
                      "*** TODO [#A] ")
@@ -1859,11 +1888,6 @@ input means nil arguments."
   (agent-shell-command-prefix #'timfel/agent-shell-command-prefix-bwrap)
   :config
 
-  (defun timfel/org-open-agent-shell-link (directory _)
-    (let ((default-directory (file-name-as-directory
-                              (expand-file-name directory))))
-      (call-interactively #'agent-shell)))
-
   (defun timfel/org-store-agent-shell-link (&optional _interactive?)
     (when (derived-mode-p 'agent-shell-mode)
       (let* ((directory (file-name-as-directory (expand-file-name default-directory)))
@@ -1875,9 +1899,10 @@ input means nil arguments."
          :link link
          :description description)
         link)))
+
   (org-link-set-parameters
    "agent-shell"
-   :follow #'timfel/org-open-agent-shell-link
+   :follow (lambda (d) (let ((default-directory d)) (call-interactively #'agent-shell)))
    :store #'timfel/org-store-agent-shell-link)
 
   (keymap-unset agent-shell-mode-map "p")
@@ -2093,7 +2118,20 @@ input means nil arguments."
   (with-eval-after-load 'jira-issues
     (transient-append-suffix 'jira-issues-actions-menu "W"
       '("a" "Investigate marked issues with agent"
-         timfel/jira-issues-investigate-marked-with-agent)))
+        timfel/jira-issues-investigate-marked-with-agent)))
+
+  (with-eval-after-load 'org
+    (defun timfel/org-store-jira-link (&optional _interactive?)
+      (when-let ((_ (or (derived-mode-p 'jira-detail-mode)
+                        (derived-mode-p 'jira-issues-mode)))
+                 (key (concat "jira:" (jira-utils-marked-item))))
+        (org-link-store-props :type "jira" :link key :description key)
+        key))
+    (org-link-set-parameters
+     "jira"
+     :follow #'jira-detail-show-issue
+     :store #'timfel/org-store-jira-link))
+
   :custom
   (jira-issues-max-results 70)
   (jira-token-is-personal-access-token t)
