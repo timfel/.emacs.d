@@ -424,9 +424,8 @@
   (org-capture-templates
    `(("t" "todo"
       entry (file+olp+datetree ,(expand-file-name "SyncFolder/todo.org" timfel/cloud-storage))
-      ,(string-join '("* TODO %(timfel/org-capture-dwim-title)%?"
+      ,(string-join '("* TODO %i%?"
                       ":Created: %T"
-                      "  %(timfel/org-capture-dwim)"
                       "  %a")
                     "\n")
       :empty-lines 0
