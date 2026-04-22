@@ -364,18 +364,14 @@
 
 (use-package org
   :commands org-mode
-  :defines (ctl-x-o-map)
   :mode (("\\.org$" . org-mode))
   :init
-  (define-prefix-command 'ctl-x-o-map)
-  :bind (:map ctl-x-map
-         ("o" . ctl-x-o-map)
-         :map ctl-x-o-map
-         ("o" . other-window) ;; because I clobbered the other window command
-         ("a" . org-agenda)
-         ("c" . org-capture)
-         ("g" . org-dblock-update)
+  :bind (("C-c c" . org-capture)
+         ("C-c a" . org-agenda)
+         ("C-c l" . org-store-link)
          :map org-mode-map
+         ("C-c g" . org-dblock-update)
+         ("C-c d" . org-dynamic-block-insert-dblock)
          ("C-c <right>" . org-shiftright)
          ("C-c <left>" . org-shiftleft)
          ("C-c M-RET" . org-insert-subheading))
@@ -390,7 +386,9 @@
     "\\|"
     "^(timfel/ci-dashboard-show-pr \"[^\"]+\" \"[^\"]+\" [0-9]+)$"
     "\\|"
-    "^(timfel/org-visit-agent-shell \"[^\"]+\")$"))
+    "^(timfel/org-visit-agent-shell \"[^\"]+\")$"
+    "\\|"
+    "^(let ((default-directory \"[^\"]+\")) (call-interactively #'agent-shell))$"))
   (org-return-follows-link t)
   (org-file-apps '((auto-mode . emacs)
                    ("\\.mm\\'" . default)
@@ -485,11 +483,6 @@
 (use-package ox-gfm
   :ensure t
   :after org)
-
-(use-package timfel-org
-  :after org
-  :bind (:map ctl-x-o-map
-         ("k" . timfel/org-capture-dwim)))
 
 (use-package org-download
   :ensure t
