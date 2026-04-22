@@ -20,7 +20,7 @@
 (declare-function org-agenda "org-agenda" (&optional arg keys restriction-lock))
 (declare-function timfel/agent-shell-fan-out-worktrees
                   "timfel-agent-shell-extensions"
-                  (task-specs &optional directory))
+                  (task-specs &optional directory session-strategy))
 (declare-function timfel/jira "timfel-jira-extensions" ())
 
 (defconst timfel/gptel-orchestration-live-set-file
@@ -271,7 +271,7 @@ Return a plist describing whether anything was created."
           :tasks_started (length effective-task-specs))))
 
 (defun timfel/gptel-tool-bitbucket (argv)
-  (condition-case err
+  (condition-case nil
       (let* ((cmd (string-join (append '("gdev-cli" "bitbucket") (mapcar #'shell-quote-argument argv)) " ")))
         (list :ok t
               :command cmd
@@ -279,7 +279,7 @@ Return a plist describing whether anything was created."
     (error "bitbucket arguments must be a list of strings")))
 
 (defun timfel/gptel-tool-jira (argv)
-  (condition-case err
+  (condition-case nil
       (let* ((cmd (string-join (append '("gdev-cli" "jira") (mapcar #'shell-quote-argument argv)) " ")))
         (list :ok t
               :command cmd

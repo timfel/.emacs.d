@@ -15,7 +15,7 @@
 (declare-function magit-current-section "magit-section")
 (declare-function timfel/agent-shell-fan-out-worktrees
                   "timfel-agent-shell-extensions"
-                  (task-specs &optional directory))
+                  (task-specs &optional directory session-strategy))
 
 (defvar ci-dashboard-base-url nil)
 (defvar ci-dashboard-mode-map nil)

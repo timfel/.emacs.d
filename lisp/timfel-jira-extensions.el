@@ -13,7 +13,7 @@
 
 (declare-function timfel/agent-shell-fan-out-worktrees
                   "timfel-agent-shell-extensions"
-                  (task-specs &optional directory))
+                  (task-specs &optional directory session-strategy))
 (declare-function jira-utils-marked-items "jira-utils")
 (declare-function timfel/determine-recent-project-root "timfel")
 

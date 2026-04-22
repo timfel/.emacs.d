@@ -208,6 +208,12 @@
 (use-package emacs-ci
   :after timfel
   :commands ci-dashboard
+  :functions (magit-current-section
+              org-link-set-parameters
+              org-link-store-props
+              timfel/org-follow-ci-link
+              timfel/org-store-ci-link)
+  :defines ci-dashboard-base-url
   :config
   (with-eval-after-load 'org
     (defun timfel/org-store-ci-link ()
@@ -215,7 +221,7 @@
                   (typ (oref section type))
                   (val (oref section value))
                   (url (cond ((eq typ 'ci-dashboard-job)
-                              (alist-get 'url job))
+                              (alist-get 'url val))
                              ((eq typ 'ci-pr-entry)
                               (when-let* ((mrg (alist-get 'mergeJob val))
                                           (prv (or (alist-get 'pullRequest val) (alist-get 'pullRequest mrg)))
@@ -1865,6 +1871,7 @@ input means nil arguments."
               shell-maker-submit
               oca-key
               oca-codex-login
+              timfel/org-store-agent-shell-link
               timfel/agent-shell-return-dwim
               timfel/agent-shell-command-prefix-bwrap)
   :commands agent-shell
@@ -2092,7 +2099,11 @@ input means nil arguments."
   :ensure t
   :functions (jira-actions-copy-issues-id-to-clipboard
               jira-api--get-current-url
-              jira-utils-marked-item)
+              jira-detail-show-issue
+              jira-utils-marked-item
+              org-link-set-parameters
+              org-link-store-props
+              timfel/org-store-jira-link)
   :defines (jira-detail--current-key)
   :commands (jira-api-get-basic-data jira-api-get-users jira-issues)
   :bind (:map jira-detail-mode-map
