@@ -218,7 +218,7 @@ buffer to TITLE, and queue TASK. When DIRECTORY is nil, use
                          (timfel/agent-shell--initial-request task))))))
                 worktree-dir
                 config
-                (if (or (string-blank-p task) prev-transcripts) nil task))))))
+                (if (or (not task) (string-blank-p task) prev-transcripts) nil task))))))
 
 (defvar-local timfel/agent-shell-worktree-parent nil)
 
