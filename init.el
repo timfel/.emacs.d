@@ -453,8 +453,29 @@
                        (?B . (:foreground "LightSteelBlue"))
                        (?C . (:foreground "OliveDrab"))))
   (org-agenda-window-setup 'current-window)
+  (org-agenda-skip-deadline-if-done t)
+  (org-todo-keywords '((sequence "TODO(t)" "IN PROGRESS(i@/!)" "BLOCKED(b@)" "|" "DONE(d!)" "WONT DO(w@/!)")))
+  (org-agenda-custom-commands
+   '(("a" "Daily agenda and all TODOs"
+      ((tags-todo "-DONE"
+                  ((org-agenda-overriding-header "Active")
+                   (org-agenda-skip-function
+                    '(and
+                      (org-agenda-skip-entry-if 'notregexp "Daily work items")
+                      (org-agenda-skip-entry-if 'todo '("TODO" "DONE" "WONT DO"))))))
+       (agenda ""
+               ((org-agenda-span 7)
+                (org-agenda-overriding-header "Agenda")
+                (org-agenda-skip-function
+                 '(or (org-agenda-skip-entry-if 'regexp "Daily work items")
+                      (org-agenda-skip-entry-if 'todo '("IN PROGRESS" "BLOCKED" "DONE" "WONT DO"))
+                      (org-agenda-skip-entry-if 'nottimestamp)))))
+       (alltodo ""
+                ((org-agenda-overriding-header "Unscheduled")
+                 (org-agenda-skip-function
+                  '(or (org-agenda-skip-entry-if 'nottodo '("TODO"))
+                       (org-agenda-skip-entry-if 'scheduled 'deadline)))))))))
   (org-clock-idle-time 15)
-
   (org-agenda-files (list (expand-file-name "SyncFolder/todo.org" timfel/cloud-storage)
                           (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage)))
   (org-capture-templates
