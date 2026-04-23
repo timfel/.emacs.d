@@ -25,18 +25,18 @@
                             (file-name-directory
                              (directory-file-name
                               (expand-file-name gitdir default-directory)))))
-                      directory))))
-              (delete-stale-session-dirs ()
-                (let ((cutoff (time-subtract (current-time) (days-to-time 6))))
-                  (dolist (path (directory-files "/tmp" t "\\`bcodex-session"))
-                    (when (and (file-directory-p path)
-                               (time-less-p
-                                (file-attribute-modification-time
-                                 (file-attributes path))
-                                cutoff))
-                      (ignore-errors
-                        (delete-directory path t)))))))
-      (delete-stale-session-dirs)
+                      directory)))))
+      ;; delete older tmp dirs
+      (let ((cutoff (time-subtract (current-time) (days-to-time 6))))
+        (dolist (path (directory-files "/tmp" t "\\`bcodex-session"))
+          (when (and (file-directory-p path)
+                     (time-less-p
+                      (file-attribute-modification-time
+                       (file-attributes path))
+                      cutoff))
+            (ignore-errors
+              (delete-directory path t)))))
+      ;; figure out all the worktree dirs we may need
       (let* ((tmpdir (make-temp-file "/tmp/bcodex-session" t (replace-regexp-in-string "[^[:alnum:]]" "" default-directory)))
              (common-root (git-common-root default-directory))
              (graal-dir (expand-file-name "../graal"))
@@ -45,35 +45,72 @@
         (append
          `("bwrap" "--die-with-parent" "--new-session"
            "--ro-bind" "/" "/"
-           "--bind" ,default-directory ,default-directory
-           "--bind" ,common-root ,common-root
-           "--bind" ,extra-dir-to-bind ,extra-dir-to-bind
-           "--bind" ,graal-common-root ,graal-common-root)
+           "--tmpfs" "/tmp"
+           "--tmpfs" ,(getenv "HOME"))
+         ;; expose select folders as writable
          (thread-last
            (seq-map #'expand-file-name
-                    '("~/dev/mx"
-                      "~/dev/graal"
-                      "~/dev/graalpython"
-                      "~/dev/graal-enterprise"
+                    `(,default-directory
+                      ,common-root
+                      ,extra-dir-to-bind
+                      ,graal-common-root
+                      ,tmpdir
                       "~/.cache"
-                      "~/.mx"
-                      "~/dev/.metadata"
-                      "~/.eclipse"
                       "~/.codex"
+                      "~/.eclipse"
+                      "~/.gradle"
+                      "~/.m2"
+                      "~/.mx"
+                      "~/.npm"
                       "~/.opencode"
-                      "~/.config/opencode"))
+                      "~/dev/.metadata"
+                      "~/dev/graal"
+                      "~/dev/graal-enterprise"
+                      "~/dev/graalpython"
+                      "~/dev/mx"
+                      ))
            (seq-filter #'file-exists-p)
            (seq-mapcat (lambda (p) `("--bind" ,p ,p))))
+         ;; expose some others as read-only
+         (thread-last
+           (seq-map #'expand-file-name
+                    `("~/.agents"
+                      "~/.bun"
+                      "~/.bundle"
+                      "~/.config"
+                      "~/.docker"
+                      "~/.emacs.d"
+                      "~/.gitconfig"
+                      "~/.gitignore"
+                      "~/.local"
+                      "~/.npmrc"
+                      "~/.nvm"
+                      "~/.ol"
+                      "~/.pyenv"
+                      "~/.rustup"
+                      "~/.sdkman"
+                      ))
+           (seq-filter #'file-exists-p)
+           (seq-mapcat (lambda (p) `("--ro-bind" ,p ,p))))
+         ;; some hide completely and make tmpfs
+         (thread-last
+           (seq-map #'expand-file-name
+                    `(,timfel/cloud-storage
+                      "~/.config/mc"
+                      "~/.config/onedrive"
+                      "~/.config/pulse"
+                      "~/.config/rclone"
+                      ))
+           (seq-filter #'file-exists-p)
+           (seq-mapcat (lambda (p) `("--tmpfs" ,p))))
          `("--proc" "/proc"
            "--dev" "/dev"
-           "--tmpfs" ,timfel/cloud-storage
-           "--bind" ,tmpdir "/tmp"
            "--chdir" ,default-directory
            "--setenv" "HTTP_PROXY" ,(or (getenv "HTTP_PROXY") "")
            "--setenv" "HTTPS_PROXY" ,(or (getenv "HTTPS_PROXY") "")
            "--setenv" "NO_PROXY" ,(or (getenv "NO_PROXY") "")
            "--setenv" "HOME" ,(getenv "HOME")
-           "--setenv" "TMPDIR" "/tmp"
+           "--setenv" "TMPDIR" ,tmpdir
            "--setenv" "XDG_CACHE_INNER" ,(expand-file-name ".agent-shell/xdgcache")
            "--setenv" "XDG_STATE_INNER" ,(expand-file-name ".agent-shell/xdgstate")
            "--setenv" "XDG_RUNTIME_INNER" ,(expand-file-name ".agent-shell/xdgruntime")
