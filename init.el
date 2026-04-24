@@ -1942,7 +1942,10 @@ input means nil arguments."
 
   (org-link-set-parameters
    "agent-shell"
-   :follow (lambda (d) (let ((default-directory d)) (call-interactively #'agent-shell)))
+   :follow (lambda (d) (let ((default-directory d)
+                             (agent-shell-session-strategy 'prompt)
+                             (agent-shell-context-sources nil))
+                         (call-interactively #'agent-shell)))
    :store #'timfel/org-store-agent-shell-link)
 
   (keymap-unset agent-shell-mode-map "p")
