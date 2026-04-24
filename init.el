@@ -1342,6 +1342,10 @@
   :if (eq window-system nil)
   :config (run-with-idle-timer 0.1 nil #'xterm-mouse-mode +1))
 
+(use-package clipetty
+  :ensure t
+  :if (eq window-system nil))
+
 (use-package proced
   :ensure t
   :bind (("<f8>". proced)
@@ -2191,7 +2195,6 @@ input means nil arguments."
      "https://www.osnews.com/feed/")))
 
 (use-package custom
-  :defines (wl-copy-process)
   :config
   (if (eq system-type 'android)
       (load-theme 'leuven-dark t)
@@ -2227,23 +2230,25 @@ input means nil arguments."
                                      (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120)))))))
 
   (when (eq system-type 'gnu/linux)
-    (if (or (eq window-system 'pgtk)
-            (and (not window-system) (getenv "WAYLAND_DISPLAY")))
-        (progn
-          (setq wl-copy-process nil)
-          (defun wl-copy (text)
-            (setq wl-copy-process (make-process :name "wl-copy"
-                                                :buffer nil
-                                                :command '("wl-copy" "-f" "-n")
-                                                :connection-type 'pipe))
-            (process-send-string wl-copy-process text)
-            (process-send-eof wl-copy-process))
-          (defun wl-paste ()
-            (if (and wl-copy-process (process-live-p wl-copy-process))
-                nil ; should return nil if we're the current paste owner
-              (shell-command-to-string "wl-paste -n | tr -d \r")))
-          (setq interprogram-cut-function 'wl-copy
-                interprogram-paste-function 'wl-paste))))
+    (when (or (eq window-system 'pgtk)
+              (and (not window-system) (getenv "WAYLAND_DISPLAY")))
+      (declare-function clipetty-cut "clipetty" (text))
+      (let ((last-copied-text))
+        (setq interprogram-cut-function
+              (lambda (text)
+                (setq last-copied-text (substring-no-properties text))
+                (if (and (fboundp #'clipetty-cut) (not window-system))
+                    (clipetty-cut last-copied-text)
+                  (make-process :name "wl-copy"
+                                :buffer nil
+                                :command '("wl-copy" "-t" "text" last-copied-text))))
+              interprogram-paste-function
+              (lambda ()
+                (let* ((raw (shell-command-to-string "wl-paste -t text -n 2>/dev/null | tr -d '\r'"))
+                       (s (and raw (not (string-empty-p raw)) raw)))
+                  (if (and s last-copied-text (string= s last-copied-text))
+                      nil
+                    s)))))))
 
   (when-let* ((nvm "~/.nvm/versions/node/")
               (_ (file-exists-p nvm)))
