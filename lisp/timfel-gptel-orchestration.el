@@ -278,7 +278,7 @@ Return a plist describing whether anything was created."
               :output (shell-command-to-string cmd)))
     (error "bitbucket arguments must be a list of strings")))
 
-(defun timfel/gptel-tool-jira (argv &optional json-payload)
+(defun timfel/gptel-tool-jira (argv)
   (condition-case nil
       (let* ((cmd (string-join (append '("gdev-cli" "jira") (mapcar #'shell-quote-argument argv)) " ")))
         (list :ok t

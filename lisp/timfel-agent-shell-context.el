@@ -240,7 +240,10 @@ This current includes:
                   ""))
              " "))))
     (catch 'timfel/agent-shell-context-limit-reached
-      (dolist (buffer (seq-subseq (buffer-list) 0 (* 2 timfel/agent-shell-context-buffer-limit)))
+      (dolist (buffer (seq-subseq (buffer-list)
+                                  0
+                                  (min (seq-length (buffer-list))
+                                       (* 2 timfel/agent-shell-context-buffer-limit))))
         (when (timfel/agent-shell-context--eligible-buffer-p buffer project-root)
           (let* ((name (buffer-name buffer))
                  (state (timfel/agent-shell-context--buffer-state buffer))
