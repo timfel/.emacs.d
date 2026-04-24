@@ -16,6 +16,7 @@
 (require 'timfel-agent-shell-ui)
 (require 'timfel-agent-shell-context)
 (require 'timfel-markdown-overlays-extensions)
+(require 'timfel-agent-shell-continue)
 
 ;;;###autoload
 (defun timfel/agent-shell-start-deferred (arg)

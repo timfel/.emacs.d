@@ -268,6 +268,9 @@
              timfel/dired-agent-shell-marked-directories
              timfel/agent-shell-context-source
              timfel/agent-shell-return-dwim
+             timfel/agent-shell-continue-configure
+             timfel/agent-shell-continue-run-now
+             timfel-agent-shell-continue-mode
              timfel/agent-shell-tile-buffers-grid)
   :hook ((agent-shell-mode . timfel/agent-shell-recovery-track-live-set)
          (agent-shell-mode . timfel/agent-shell-retry-on-hitting-rate-limit)
