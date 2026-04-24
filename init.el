@@ -411,6 +411,26 @@
          ("C-c t" . (lambda () (interactive) (org-capture nil "t")))
          ("C-c a" . org-agenda)
          ("C-c l" . org-store-link)
+         ("C-c b" . (lambda ()
+                      (interactive)
+                      (org-store-link nil)
+                      (when-let* ((link (caar org-stored-links))
+                                  (files (org-agenda-files))
+                                  (re (regexp-quote link))
+                                  (hit 0))
+                        (seq-find (lambda (f)
+                                    (ignore-errors
+                                      (with-current-buffer (find-file-noselect f)
+                                        (save-excursion
+                                          (goto-char (point-min))
+                                          (when (re-search-forward re nil t)
+                                            (setq hit (cons f (match-beginning 0)))
+                                            t)))))
+                                  files)
+                        (unless (numberp hit)
+                          (find-file (car hit))
+                          (goto-char (cdr hit))
+                          (recenter)))))
          :map org-mode-map
          ("C-c g" . org-dblock-update)
          ("C-c d" . org-dynamic-block-insert-dblock)
@@ -465,6 +485,12 @@
   (org-agenda-window-setup 'current-window)
   (org-agenda-skip-deadline-if-done t)
   (org-todo-keywords '((sequence "TODO(t)" "IN PROGRESS(i@/!)" "BLOCKED(b@)" "|" "DONE(d!)" "WONT DO(w@/!)")))
+  (org-todo-keyword-faces
+   '(("TODO" . (:foreground "Red" :weight bold))
+     ("IN PROGRESS" . (:foreground "Cyan" :weight bold))
+     ("BLOCKED" . (:foreground "Magenta" :weight bold))
+     ("DONE" . (:foreground "LimeGreen" :weight bold))
+     ("WONT DO" . (:foreground "LimeGreen" :weight bold))))
   (org-agenda-custom-commands
    '(("a" "Daily agenda and all TODOs"
       ((tags-todo "-DONE"
@@ -490,14 +516,14 @@
                           (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage)))
   (org-capture-templates
    `(("t" "todo"
-      entry (file ,(expand-file-name "SyncFolder/todo.org" timfel/cloud-storage))
+      entry (file+olp+datetree ,(expand-file-name "SyncFolder/todo.org" timfel/cloud-storage))
       ,(string-join '("* TODO %i%?"
                       ":Created: %T"
                       ":DEADLINE: %(org-insert-time-stamp (org-read-date nil t \"+7d\"))"
                       "  %a")
                     "\n")
-      :empty-lines 0
-      :tree-type :week)
+      :empty-lines 1
+      :tree-type month)
      ("n" "note"
       entry (file+olp+datetree ,(expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
       "* %?\nEntered on %U\n")
