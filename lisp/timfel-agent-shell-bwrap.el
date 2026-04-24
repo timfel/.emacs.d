@@ -41,7 +41,8 @@
              (common-root (git-common-root default-directory))
              (graal-dir (expand-file-name "../graal"))
              (extra-dir-to-bind (if (file-directory-p graal-dir) graal-dir default-directory))
-             (graal-common-root (if (file-directory-p graal-dir) (git-common-root graal-dir) extra-dir-to-bind)))
+             (graal-common-root (if (file-directory-p graal-dir) (git-common-root graal-dir) extra-dir-to-bind))
+             (real-config-toml (file-truename "~/.codex/config.toml")))
         (append
          `("bwrap" "--die-with-parent" "--new-session"
            "--ro-bind" "/" "/"
@@ -67,6 +68,7 @@
                       "~/dev/graal"
                       "~/dev/graal-enterprise"
                       "~/dev/graalpython"
+                      "~/dev/eclipse"
                       "~/dev/mx"
                       ))
            (seq-filter #'file-exists-p)
@@ -74,7 +76,8 @@
          ;; expose some others as read-only
          (thread-last
            (seq-map #'expand-file-name
-                    `("~/.agents"
+                    `(,real-config-toml
+                      "~/.agents"
                       "~/.bun"
                       "~/.bundle"
                       "~/.config"
