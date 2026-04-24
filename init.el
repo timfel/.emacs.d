@@ -407,6 +407,8 @@
   :mode (("\\.org$" . org-mode))
   :init
   :bind (("C-c c" . org-capture)
+         ("C-c m" . (lambda () (interactive) (org-capture nil "m")))
+         ("C-c t" . (lambda () (interactive) (org-capture nil "t")))
          ("C-c a" . org-agenda)
          ("C-c l" . org-store-link)
          :map org-mode-map
@@ -1940,13 +1942,14 @@ input means nil arguments."
          :description description)
         link)))
 
-  (org-link-set-parameters
-   "agent-shell"
-   :follow (lambda (d) (let ((default-directory d)
-                             (agent-shell-session-strategy 'prompt)
-                             (agent-shell-context-sources nil))
-                         (call-interactively #'agent-shell)))
-   :store #'timfel/org-store-agent-shell-link)
+  (with-eval-after-load 'org
+    (org-link-set-parameters
+     "agent-shell"
+     :follow (lambda (d) (let ((default-directory d)
+                               (agent-shell-session-strategy 'prompt)
+                               (agent-shell-context-sources nil))
+                           (call-interactively #'agent-shell)))
+     :store #'timfel/org-store-agent-shell-link))
 
   (keymap-unset agent-shell-mode-map "p")
   (keymap-unset agent-shell-mode-map "n")

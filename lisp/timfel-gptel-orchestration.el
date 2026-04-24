@@ -278,7 +278,7 @@ Return a plist describing whether anything was created."
               :output (shell-command-to-string cmd)))
     (error "bitbucket arguments must be a list of strings")))
 
-(defun timfel/gptel-tool-jira (argv)
+(defun timfel/gptel-tool-jira (argv &optional json-payload)
   (condition-case nil
       (let* ((cmd (string-join (append '("gdev-cli" "jira") (mapcar #'shell-quote-argument argv)) " ")))
         (list :ok t
@@ -287,23 +287,29 @@ Return a plist describing whether anything was created."
     (error "jira arguments must be a list of strings")))
 
 ;;;###autoload
-(defun timfel/gptel-open-agents-orchestration (&optional new-buffer)
+(defun timfel/gptel-open-agents-orchestration (&optional inline?)
   "Open a gptel chat buffer configured for the AGENTS.md orchestration flow.
 
-With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
+With prefix argument INLINE?, just send the current buffer and see.
 `timfel/gptel-orchestration-buffer-name'."
   (interactive "P")
   (let* ((default-directory (expand-file-name (locate-user-emacs-file "")))
-         (buffer-name (if new-buffer
-                          (generate-new-buffer-name
-                           timfel/gptel-orchestration-buffer-name)
-                        timfel/gptel-orchestration-buffer-name))
-         (buffer (gptel buffer-name nil nil t)))
+         (buffer-name timfel/gptel-orchestration-buffer-name)
+         (buffer (if inline? (current-buffer) (gptel buffer-name nil nil t))))
     (with-current-buffer buffer
       (gptel--apply-preset
        'agents-orchestration
        (lambda (sym val)
          (set (make-local-variable sym) val))))
+
+    (if inline?
+        (gptel-request
+            (if (use-region-p)
+                (buffer-substring-no-properties (region-beginning)
+                                                (region-end))
+              (buffer-substring-no-properties (point-min)
+                                              (point)))
+          :stream gptel-stream))
     buffer))
 
 (setq timfel/gptel-orchestration-tools
@@ -396,7 +402,8 @@ With prefix argument NEW-BUFFER, create a fresh buffer instead of reusing
  'agents-orchestration
  :description "Use Emacs-native orchestration tools for current work, work queues, worktree task startup, and direct live-workspace Elisp evaluation."
  :system 'agents-orchestration
- :tools (mapcar #'gptel-tool-name timfel/gptel-orchestration-tools)
+ :tools (append (mapcar #'gptel-tool-name timfel/gptel-orchestration-tools)
+                '("create_file"))
  :use-tools t)
 
 (provide 'timfel-gptel-orchestration)
