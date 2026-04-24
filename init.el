@@ -2240,6 +2240,15 @@ input means nil arguments."
                                  (if (eq system-type 'android)
                                      (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120)))))))
 
+  (setq safe-local-variable-values
+        (append safe-local-variable-values
+                '((eval ignore-errors (require 'emacs-ci))
+                  (eval ignore-errors (require 'agent-shell))
+                  (eval ignore-errors (require 'jira))
+                  (smie-indent-basic . 4)
+                  (jsonnet-indent-level . 4)
+                  (flycheck-disabled-checkers emacs-lisp-checkdoc))))
+
   (when (eq system-type 'gnu/linux)
     (when (or (eq window-system 'pgtk)
               (and (not window-system) (getenv "WAYLAND_DISPLAY")))
