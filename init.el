@@ -53,12 +53,20 @@
 
   :custom
   (browse-url-generic-program (or (executable-find "wslview") "xdg-open"))
-  (browse-url-browser-function (lambda (&rest args)
-                                 (if (y-or-n-p "Browse with EWW? ")
-                                     (apply #'eww-browse-url args)
+  (browse-url-browser-function (lambda (url &rest args)
+                                 (if (and (not (string-match-p
+                                                (rx (or "github.com"
+                                                        "jira"
+                                                        "bitbucket"
+                                                        ".google.com"
+                                                        ".office.com"
+                                                        ".slack.com"))
+                                                url))
+                                          (y-or-n-p "Browse with EWW? "))
+                                     (apply #'eww-browse-url url args)
                                    (if (eq system-type 'windows-nt)
-                                       (apply #'browse-url-default-browser args)
-                                     (apply #'browse-url-generic args)))))
+                                       (apply #'browse-url-default-browser url args)
+                                     (apply #'browse-url-generic url args)))))
   (custom-file (locate-user-emacs-file "emacs-custom.el"))
   (confirm-kill-emacs 'yes-or-no-p)
   (visible-bell nil)
