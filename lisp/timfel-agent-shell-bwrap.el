@@ -10,6 +10,49 @@
 (require 'subr-x)
 (require 'timfel)
 
+(defconst write-dirs
+  '("~/.cache"
+    "~/.codex"
+    "~/.eclipse"
+    "~/.gradle"
+    "~/.m2"
+    "~/.mx"
+    "~/.npm"
+    "~/.opencode"
+    "~/dev/.metadata"
+    "~/dev/graal/.git"
+    "~/dev/graal-enterprise/.git"
+    "~/dev/graalpython/.git"
+    "~/dev/eclipse"
+    "~/dev/mx")
+  "Directories that my agents generally need writable.")
+
+(defconst read-dirs
+  '("~/.agents"
+    "~/.bun"
+    "~/.bundle"
+    "~/.config"
+    "~/.docker"
+    "~/.emacs.d"
+    "~/.gitconfig"
+    "~/.gitignore"
+    "~/.local"
+    "~/.npmrc"
+    "~/.nvm"
+    "~/.ol"
+    "~/.pyenv"
+    "~/.rustup"
+    "~/.sdkman")
+  "Directories that my agents generally need readable.")
+
+(defconst hidden-dirs
+  `(,timfel/cloud-storage
+    "~/.config/mc"
+    "~/.config/onedrive"
+    "~/.config/pulse"
+    "~/.config/rclone")
+  "Directories that my agents should not see.")
+
 ;;;###autoload
 (defun timfel/agent-shell-command-prefix-bwrap (_buffer)
   "Return a `bwrap' command prefix for `agent-shell', or nil when unavailable."
@@ -42,7 +85,12 @@
              (graal-dir (expand-file-name "../graal"))
              (extra-dir-to-bind (if (file-directory-p graal-dir) graal-dir default-directory))
              (graal-common-root (if (file-directory-p graal-dir) (git-common-root graal-dir) extra-dir-to-bind))
-             (real-config-toml (file-truename "~/.codex/config.toml")))
+             (real-config-toml (file-truename "~/.codex/config.toml"))
+             (extra-write-dirs (list default-directory
+                                     common-root
+                                     extra-dir-to-bind
+                                     graal-common-root
+                                     tmpdir)))
         (append
          `("bwrap" "--die-with-parent" "--new-session"
            "--ro-bind" "/" "/"
@@ -51,59 +99,21 @@
          ;; expose select folders as writable
          (thread-last
            (seq-map #'expand-file-name
-                    `(,default-directory
-                      ,common-root
-                      ,extra-dir-to-bind
-                      ,graal-common-root
-                      ,tmpdir
-                      "~/.cache"
-                      "~/.codex"
-                      "~/.eclipse"
-                      "~/.gradle"
-                      "~/.m2"
-                      "~/.mx"
-                      "~/.npm"
-                      "~/.opencode"
-                      "~/dev/.metadata"
-                      "~/dev/graal"
-                      "~/dev/graal-enterprise"
-                      "~/dev/graalpython"
-                      "~/dev/eclipse"
-                      "~/dev/mx"
-                      ))
+                    (append write-dirs
+                            extra-write-dirs))
            (seq-filter #'file-exists-p)
            (seq-mapcat (lambda (p) `("--bind" ,p ,p))))
          ;; expose some others as read-only
          (thread-last
            (seq-map #'expand-file-name
-                    `(,real-config-toml
-                      "~/.agents"
-                      "~/.bun"
-                      "~/.bundle"
-                      "~/.config"
-                      "~/.docker"
-                      "~/.emacs.d"
-                      "~/.gitconfig"
-                      "~/.gitignore"
-                      "~/.local"
-                      "~/.npmrc"
-                      "~/.nvm"
-                      "~/.ol"
-                      "~/.pyenv"
-                      "~/.rustup"
-                      "~/.sdkman"
-                      ))
+                    (append read-dirs
+                            (list real-config-toml)))
            (seq-filter #'file-exists-p)
+           (seq-filter (lambda (e) (not (seq-some (lambda (e2) (file-equal-p e e2)) extra-write-dirs))))
            (seq-mapcat (lambda (p) `("--ro-bind" ,p ,p))))
          ;; some hide completely and make tmpfs
          (thread-last
-           (seq-map #'expand-file-name
-                    `(,timfel/cloud-storage
-                      "~/.config/mc"
-                      "~/.config/onedrive"
-                      "~/.config/pulse"
-                      "~/.config/rclone"
-                      ))
+           (seq-map #'expand-file-name hidden-dirs)
            (seq-filter #'file-exists-p)
            (seq-mapcat (lambda (p) `("--tmpfs" ,p))))
          `("--proc" "/proc"
