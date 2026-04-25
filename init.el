@@ -1040,8 +1040,87 @@
   (load-theme 'eclipse t))
 
 (use-package tramp
-  :defer 30
+  :defer 3
+  :custom
+  (tramp-use-scp-direct-remote-copying t)
+  (remote-file-name-inhibit-cache nil)
+  (remote-file-name-inhibit-locks t)
+  (remote-file-name-inhibit-auto-save t)
+  (remote-file-name-inhibit-auto-save-visited t)
+  (auto-revert-remote-files nil)
+  (enable-remote-dir-locals nil)
+  (tramp-copy-size-limit (* 1024 1024))
+  (tramp-verbose 2)
   :config
+  (connection-local-set-profile-variables
+   'my-remote-profile
+   '((dired-check-symlinks . nil)
+     (shell-history-file-name . t)
+     (tramp-direct-async-process . t)))
+
+  (connection-local-set-profiles
+   '(:application tramp)
+   'my-remote-profile)
+
+  (defun memoize-remote (key cache orig-fn &rest args)
+    "Memoize a value if the key is a remote path."
+    (if (and key
+             (file-remote-p key))
+        (if-let ((current (assoc key (symbol-value cache))))
+            (cdr current)
+          (let ((current (apply orig-fn args)))
+            (set cache (cons (cons key current) (symbol-value cache)))
+            current))
+      (apply orig-fn args)))
+
+  (with-eval-after-load 'magit
+    (connection-local-set-profile-variables
+     'my-remote-magit-profile
+     '((magit-commit-show-diff . nil)
+       (magit-branch-direct-configure . nil)
+       (magit-refresh-status-buffer . nil)))
+
+    (connection-local-set-profiles
+     '(:application tramp)
+     'my-remote-magit-profile)
+
+    ;; Memoize magit top level
+    (defvar magit-toplevel-cache nil)
+    (defun memoize-magit-toplevel (orig &optional directory)
+      (memoize-remote (or directory default-directory)
+                      'magit-toplevel-cache orig directory))
+    (advice-add 'magit-toplevel :around #'memoize-magit-toplevel)
+    
+    (setq magit-tramp-pipe-stty-settings 'pty))
+
+  (with-eval-after-load 'vc
+    (setq vc-ignore-dir-regexp
+          (format "\\(%s\\)\\|\\(%s\\)"
+                  vc-ignore-dir-regexp
+                  tramp-file-name-regexp))
+    ;; memoize vc-git-root
+    (defvar vc-git-root-cache nil)
+    (defun memoize-vc-git-root (orig file)
+      (let ((value (memoize-remote (file-name-directory file) 'vc-git-root-cache orig file)))
+        ;; sometimes vc-git-root returns nil even when there is a root there
+        (when (null (cdr (car vc-git-root-cache)))
+          (setq vc-git-root-cache (cdr vc-git-root-cache)))
+        value))
+    (advice-add 'vc-git-root :around #'memoize-vc-git-root))
+
+  (with-eval-after-load 'compile
+    (remove-hook 'compilation-mode-hook #'tramp-compile-disable-ssh-controlmaster-options))
+
+  (with-eval-after-load 'project
+    ;; Memoize current project
+    (defvar project-current-cache nil)
+    (defun memoize-project-current (orig &optional prompt directory)
+      (memoize-remote (or directory
+                          project-current-directory-override
+                          default-directory)
+                      'project-current-cache orig prompt directory))
+    (advice-add 'project-current :around #'memoize-project-current))
+
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
 
 (use-package ido
