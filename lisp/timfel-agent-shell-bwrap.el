@@ -100,14 +100,13 @@
          (thread-last
            (seq-map #'expand-file-name
                     (append write-dirs
+                            (list real-config-toml)
                             extra-write-dirs))
            (seq-filter #'file-exists-p)
            (seq-mapcat (lambda (p) `("--bind" ,p ,p))))
          ;; expose some others as read-only
          (thread-last
-           (seq-map #'expand-file-name
-                    (append read-dirs
-                            (list real-config-toml)))
+           (seq-map #'expand-file-name read-dirs)
            (seq-filter #'file-exists-p)
            (seq-filter (lambda (e) (not (seq-some (lambda (e2) (file-equal-p e e2)) extra-write-dirs))))
            (seq-mapcat (lambda (p) `("--ro-bind" ,p ,p))))
