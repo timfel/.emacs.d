@@ -2261,6 +2261,8 @@ input means nil arguments."
                           (if prefix
                               key
                             (concat (jira-api--get-current-url) "/browse/" key))))))
+         :map jira-detail-mode-map
+              ("C-x a i" . timfel/jira-issues-investigate-marked-with-agent)
          :map jira-issues-mode-map
               ("c" . (lambda (&optional prefix)
                        (interactive "P")

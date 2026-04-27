@@ -17,6 +17,8 @@
 (declare-function jira-utils-marked-items "jira-utils")
 (declare-function timfel/determine-recent-project-root "timfel")
 
+(defvar jira-detail--current nil)
+(defvar jira-detail--current-key nil)
 (defvar jira-issues-key-summary-map)
 
 (defvar timfel/jira-periodic-issues-buffer-name "*Jira Periodic Issues*"
@@ -129,18 +131,20 @@ The return value is a list of `(KEY . SUMMARY)' pairs for issues with label
 
 (defun timfel/jira--explicitly-marked-issue-ids ()
   "Return explicitly marked Jira issue ids in the current tabulated list."
-  (let (issue-ids)
-    (save-excursion
-      (goto-char (point-min))
-      (while (< (point) (point-max))
-        (let ((issue-id (tabulated-list-get-id))
-              (mark-state (and (fboundp 'tablist-get-mark-state)
-                               (tablist-get-mark-state))))
-          (when (and issue-id mark-state
-                     (not (eq (car mark-state) ?\s)))
-            (push issue-id issue-ids)))
-        (forward-line 1)))
-    (nreverse issue-ids)))
+  (if (derived-mode-p 'jira-detail-mode)
+      (list jira-detail--current-key)
+    (let (issue-ids)
+      (save-excursion
+        (goto-char (point-min))
+        (while (< (point) (point-max))
+          (let ((issue-id (tabulated-list-get-id))
+                (mark-state (and (fboundp 'tablist-get-mark-state)
+                                 (tablist-get-mark-state))))
+            (when (and issue-id mark-state
+                       (not (eq (car mark-state) ?\s)))
+              (push issue-id issue-ids)))
+          (forward-line 1)))
+      (nreverse issue-ids))))
 
 (defun timfel/jira-periodic-issues-investigate-with-agent ()
   "Start worktree-backed agent investigations for marked periodic Jira issues.
