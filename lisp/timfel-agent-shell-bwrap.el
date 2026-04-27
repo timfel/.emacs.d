@@ -13,6 +13,7 @@
 (defconst write-dirs
   '("~/.cache"
     "~/.codex"
+    "~/.local/share/opencode/"
     "~/.eclipse"
     "~/.gradle"
     "~/.m2"
@@ -86,6 +87,7 @@
              (extra-dir-to-bind (if (file-directory-p graal-dir) graal-dir default-directory))
              (graal-common-root (if (file-directory-p graal-dir) (git-common-root graal-dir) extra-dir-to-bind))
              (real-config-toml (file-truename "~/.codex/config.toml"))
+             (real-config-jsonc (file-truename "~/.config/opencode/opencode.jsonc"))
              (extra-write-dirs (list default-directory
                                      common-root
                                      extra-dir-to-bind
@@ -96,20 +98,21 @@
            "--ro-bind" "/" "/"
            "--tmpfs" "/tmp"
            "--tmpfs" ,(getenv "HOME"))
-         ;; expose select folders as writable
-         (thread-last
-           (seq-map #'expand-file-name
-                    (append write-dirs
-                            (list real-config-toml)
-                            extra-write-dirs))
-           (seq-filter #'file-exists-p)
-           (seq-mapcat (lambda (p) `("--bind" ,p ,p))))
          ;; expose some others as read-only
          (thread-last
            (seq-map #'expand-file-name read-dirs)
            (seq-filter #'file-exists-p)
            (seq-filter (lambda (e) (not (seq-some (lambda (e2) (file-equal-p e e2)) extra-write-dirs))))
            (seq-mapcat (lambda (p) `("--ro-bind" ,p ,p))))
+         ;; expose select folders as writable
+         (thread-last
+           (seq-map #'expand-file-name
+                    (append write-dirs
+                            (list real-config-toml
+                                  real-config-jsonc)
+                            extra-write-dirs))
+           (seq-filter #'file-exists-p)
+           (seq-mapcat (lambda (p) `("--bind" ,p ,p))))
          ;; some hide completely and make tmpfs
          (thread-last
            (seq-map #'expand-file-name hidden-dirs)
