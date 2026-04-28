@@ -2031,7 +2031,7 @@ input means nil arguments."
   (agent-shell-session-strategy 'latest)
   (agent-shell-highlight-blocks nil)
   (agent-shell-prefer-viewport-interaction nil)
-  (agent-shell-preferred-agent-config 'codex)
+  (agent-shell-preferred-agent-config 'opencode)
   (agent-shell-show-config-icons nil)
   (agent-shell-show-usage-at-turn-end t)
   (agent-shell-text-file-capabilities t)
@@ -2092,7 +2092,7 @@ input means nil arguments."
   (setq
    agent-shell-openai-codex-environment (agent-shell-make-environment-variables :inherit-env t)
    agent-shell-openai-authentication (agent-shell-openai-make-authentication :codex-api-key #'oca-codex-login)
-   agent-shell-opencode-authentication (agent-shell-opencode-make-authentication :api-key #'oca-key)))
+   agent-shell-opencode-authentication (agent-shell-opencode-make-authentication :none t)))
 
 (use-package timfel-agent-shell-unstick
   :after agent-shell)
