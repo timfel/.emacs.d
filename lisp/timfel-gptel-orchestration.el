@@ -989,6 +989,8 @@ When END-OF-DAY is non-nil, return the start of the following day."
         (insert prompt))
       (with-current-buffer buffer
         (erase-buffer)
+        ;; This report must not inherit a stale model from a reused gptel buffer.
+        (setq-local gptel-model 'gpt-5.6-luna)
         (setq-local gptel-use-tools nil)
         (setq-local gptel-use-context nil)
         (setq-local gptel-include-reasoning nil)
