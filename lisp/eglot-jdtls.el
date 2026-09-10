@@ -160,14 +160,26 @@ process through TRAMP, so this should also be available in the remote PATH."
 (defun eglot-jdtls-clear-workspace-and-cache ()
   "Delete the workspace directory for the current project after confirming."
   (interactive)
-  (if-let* ((project (project-current t))
-            (root (project-root project))
-            (directory (eglot-jdtls--project-dir root)))
-      (when (yes-or-no-p
-             (format "Delete JDTLS workspace and cache directory %s? " directory))
-        (when (file-directory-p directory)
-          (delete-directory directory t))
-        (message "Deleted JDTLS workspace and cache for %s" root))))
+  (when-let* ((project (project-current t))
+              (root (project-root project))
+              (directory (eglot-jdtls--project-dir root)))
+    (when (yes-or-no-p
+           (format "Delete JDTLS workspace and cache directory %s? " directory))
+      (call-interactively #'eglot-shutdown)
+      (when (file-directory-p directory)
+        (delete-directory directory t))
+      (message "Deleted JDTLS workspace and cache for %s" root)
+      (when (yes-or-no-p "Delete also the Eclipse project files?")
+        ;; no recursively delete all eclipse config files under the project
+        ;; root, so they can be regenerated
+        (dolist (file (directory-files-recursively
+                       root
+                       "\\(?:\\.classpath\\|\\.project\\|\\.settings\\|\\.factorypath\\)\\'"
+                       t))
+          (if (file-directory-p file)
+              (delete-directory file t)
+            (delete-file file)))
+        (message "Deleted Eclipse project files for %s" root)))))
 
 ;;;###autoload
 (defun eglot-jdtls (_interactive project)
