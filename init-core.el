@@ -7,6 +7,7 @@
   :defines (timfel/cloud-storage android-intercept-control-space)
   :functions (org-capture-kill org-capture-finalize org-capture with-auto-default
               timfel/android-mail-addresses timfel/android-send-it
+              timfel/android-start-termux
               mail-fetch-field mail-strip-quoted-names
               mail-sendmail-undelimit-header expand-mail-aliases)
   :after (timfel)
@@ -80,6 +81,25 @@
                    (with-current-buffer output-buffer
                      (string-trim (buffer-string)))))))))
   (setq send-mail-function #'timfel/android-send-it)
+
+  (defun timfel/android-start-termux ()
+    "Switch to the Termux activity."
+    (let* ((am (or (executable-find "am")
+                   (and (file-executable-p "/system/bin/am")
+                        "/system/bin/am")))
+           (output-buffer "*Android Termux launch*"))
+      (unless am
+        (user-error "Cannot find Android am command"))
+      (with-current-buffer (get-buffer-create output-buffer)
+        (erase-buffer))
+      (let ((status (call-process am nil output-buffer nil
+                                  "start" "-n"
+                                  "com.termux/.app.TermuxActivity")))
+        (unless (and (integerp status) (zerop status))
+          (error "Could not start Termux (%s): %s"
+                 status
+                 (with-current-buffer output-buffer
+                   (string-trim (buffer-string))))))))
 
   ;; AltGr on the no-name phone keyboard I use sends KEYCODE_*, and there is no
   ;; Meta key, so let's make it usable
@@ -188,11 +208,20 @@
                            (if (and (not (executable-find "git"))
                                     (file-equal-p default-directory "~/.emacs.d"))
                                (let ((tgt (car (file-expand-wildcards "/content/storage/com.termux.documents/*/"))))
+                                 (unless tgt
+                                   (user-error "Cannot find the Termux shared folder"))
                                  (require 'eshell)
                                  (declare-function eshell/rm "em-unix")
                                  (declare-function eshell/cp "em-unix")
+                                 (message "Pushing to Termux (1/2): removing old Git metadata…")
+                                 (redisplay)
                                  (eshell/rm "-r" "-f" "~/.emacs.d/.git")
-                                 (eshell/cp "-f" "-r" "~/.emacs.d" tgt))
+                                 (message "Pushing to Termux (2/2): copying configuration…")
+                                 (redisplay)
+                                 (eshell/cp "-f" "-r" "~/.emacs.d" tgt)
+                                 (message "Push complete; switching to Termux…")
+                                 (redisplay)
+                                 (timfel/android-start-termux))
                              (vc-push)))
 
                           ((pred (memq 'org-social-mode)) ;; cancel org social post
