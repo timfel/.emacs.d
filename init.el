@@ -54,6 +54,10 @@
                         (set-mark (point))
                         (end-of-line)
                         (call-interactively #'comment-or-uncomment-region)))))
+         ("C-x C-M-2" . (lambda ()
+                          (interactive)
+                          (set-face-attribute 'default nil
+                                              :height (* 2 (face-attribute 'default :height)))))
          ("M-]" . forward-list)
          ("C-M-]" . backward-list)
          ("C-z" . (lambda () (interactive) (beep))))
