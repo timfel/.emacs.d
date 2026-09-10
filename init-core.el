@@ -178,7 +178,7 @@
                              (if (and (not (executable-find "git"))
                                       (file-equal-p default-directory "~/.emacs.d"))
                                  (let ((tgt (car (file-expand-wildcards "/content/storage/com.termux.documents/*/.emacs.d"))))
-                                   (require 'eshell)
+                                   (require 'em-unix)
                                    (declare-function eshell/cp "em-unix")
                                    (eshell/cp "-f" "-r" tgt "~/"))
                                (vc-pull)))
@@ -210,7 +210,7 @@
                                (let ((tgt (car (file-expand-wildcards "/content/storage/com.termux.documents/*/"))))
                                  (unless tgt
                                    (user-error "Cannot find the Termux shared folder"))
-                                 (require 'eshell)
+                                 (require 'em-unix)
                                  (declare-function eshell/rm "em-unix")
                                  (declare-function eshell/cp "em-unix")
                                  (message "Pushing to Termux (1/2): removing old Git metadata…")
