@@ -5,7 +5,10 @@
   :if (eq system-type 'android)
   :no-require t
   :defines (timfel/cloud-storage android-intercept-control-space)
-  :functions (org-capture-kill org-capture-finalize org-capture with-auto-default)
+  :functions (org-capture-kill org-capture-finalize org-capture with-auto-default
+              timfel/android-mail-addresses timfel/android-send-it
+              mail-fetch-field mail-strip-quoted-names
+              mail-sendmail-undelimit-header expand-mail-aliases)
   :after (timfel)
   :custom
   (tool-bar-mode 1)
@@ -16,6 +19,67 @@
   (tool-bar-button-margin 32)
   (touch-screen-display-keyboard t)
   :config
+
+  ;; `mailclient-send-it' uses a `mailto:' URL, but Android Emacs opens
+  ;; those with ACTION_VIEW.  Use ACTION_SEND with the standard email
+  ;; extras instead.  This keeps the implementation in Lisp and lets the
+  ;; configured mail app fill in the recipients, subject, and body.
+  (defun timfel/android-mail-addresses (field)
+    (when-let* ((value (mail-fetch-field field nil t)))
+      (split-string (mail-strip-quoted-names value)
+                    "[ \t\n]*,[ \t\n]*" t)))
+
+  (defun timfel/android-send-it ()
+    "Pass the current message to an Android mail client via `am'."
+    (require 'mail-utils)
+    (require 'sendmail)
+    (let ((mailbuf (current-buffer)) to cc bcc subject body)
+      (with-temp-buffer
+        (insert-buffer-substring mailbuf)
+        (mail-sendmail-undelimit-header)
+        (let ((headers-end (point-marker)))
+          (when mail-aliases
+            (expand-mail-aliases (point-min) headers-end))
+          (save-restriction
+            (narrow-to-region (point-min) headers-end)
+            (setq to (timfel/android-mail-addresses "To")
+                  cc (timfel/android-mail-addresses "Cc")
+                  bcc (timfel/android-mail-addresses "Bcc")
+                  subject (mail-fetch-field "Subject" nil t)))
+          (widen)
+          (goto-char headers-end)
+          (when (looking-at "\n")
+            (forward-char 1))
+          (setq body (buffer-substring-no-properties (point) (point-max)))))
+      (let* ((am (or (executable-find "am")
+                     (and (file-executable-p "/system/bin/am")
+                          "/system/bin/am")))
+             (output-buffer "*Android mail intent*")
+             (args (append
+                    '("start" "-a" "android.intent.action.SEND"
+                      "-t" "text/plain")
+                    (when to
+                      (list "--esa" "android.intent.extra.EMAIL"
+                            (string-join to ",")))
+                    (when cc
+                      (list "--esa" "android.intent.extra.CC"
+                            (string-join cc ",")))
+                    (when bcc
+                      (list "--esa" "android.intent.extra.BCC"
+                            (string-join bcc ",")))
+                    (when subject
+                      (list "--es" "android.intent.extra.SUBJECT" subject))
+                    (list "--es" "android.intent.extra.TEXT" (or body "")))))
+        (unless am
+          (user-error "Cannot find Android am command"))
+        (let ((status (let ((coding-system-for-write 'utf-8))
+                        (apply #'call-process am nil output-buffer nil args))))
+          (unless (and (integerp status) (zerop status))
+            (error "Android mail intent failed (%s): %s"
+                   status
+                   (with-current-buffer output-buffer
+                     (string-trim (buffer-string)))))))))
+  (setq send-mail-function #'timfel/android-send-it)
 
   ;; AltGr on the no-name phone keyboard I use sends KEYCODE_*, and there is no
   ;; Meta key, so let's make it usable
