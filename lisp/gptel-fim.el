@@ -74,6 +74,10 @@ them in case a server returns a terminator as ordinary response text."
                   (cond
                    ((stringp response)
                     (push response response-parts))
+                   ;; Reasoning arrives on the streaming callback even when
+                   ;; `gptel-include-reasoning' is nil.  It is metadata, not a
+                   ;; failed response, so leave the insertion markers intact.
+                   ((eq (car-safe response) 'reasoning))
                    ((eq response t)
                     (unwind-protect
                         (when (buffer-live-p buffer)
