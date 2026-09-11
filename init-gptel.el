@@ -13,6 +13,14 @@
   (gptel-default-mode 'org-mode)
   (gptel-log-level 'info)
   (gptel-org-branching-context t)
+  :bind
+  (:prefix-map my-gptel-prefix-map
+               :prefix "C-x g"
+               :prefix-docstring "GPTel commands"
+               ("t" . gptel-org-set-topic)
+               ("f" . gptel-fim)
+               ("c" . gptel-compile)
+               ("s" . gptel-send))
   :config
   (require 'gptel-openai)
   (require 'gptel-openai-oauth)
@@ -37,16 +45,6 @@
                   `(:reasoning (:effort ,effort
                                 :summary "detailed"))))))
 
-  ;; currently:
-  ;;
-  ;;  llama-server -hf unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL --alias \
-  ;;    local-code-model --port 8080 --host 0.0.0.0 --ctx-size 65536 --flash-attn \
-  ;;    on --cache-type-k q8_0 --cache-type-v q8_0 --jinja -np 1 --reasoning off
-  ;;
-  ;;  llama-server -hf unsloth/gemma-4-E4B-it-qat-GGUF:UD-Q4_K_XL --alias \
-  ;;    local-chat-model --port 8080 --host 0.0.0.0 --ctx-size 65536 --flash-attn \
-  ;;    on --cache-type-k q8_0 --cache-type-v q8_0 --jinja -np 1 --temp 1.0 \
-  ;;    --top-p 0.95 --top-k 64
   (gptel-make-openai "llama-cpp"
     :host "127.0.0.1:8080"
     :protocol "http"
@@ -54,31 +52,10 @@
     :models '(local-code-model local-chat-model)
     :key "none")
 
-  (setq gptel-directives
-        (let* ((promptdir (expand-file-name "prompts" user-emacs-directory))
-               (prompt-files (directory-files promptdir t "\\.md\\'")))
-          (mapcar
-           (lambda (prompt-file)
-             (with-temp-buffer
-               (insert-file-contents prompt-file)
-               (let* ((gmd (lambda (key)
-                             (save-excursion
-                               (goto-char (point-min))
-                               (when (re-search-forward
-                                      (format "^ *<!-- *#\\+%s: \\(.*?\\) *--> *$" key)
-                                      nil t)
-                                 (string-trim (match-string 1))))))
-                      (prompt-name (or (funcall gmd "name") (file-name-base prompt-file)))
-                      (prompt-description (or (funcall gmd "description") "NO DESCR")))
-                 (goto-char (point-min))
-                 (flush-lines "^ *<!--.*--> *$")
-                 (goto-char (point-min))
-                 (when (looking-at "\n+") (delete-region (point) (match-end 0)))
-                 (list
-                  (intern prompt-name)
-                  prompt-description
-                  (buffer-substring-no-properties (point-min) (point-max))))))
-           prompt-files))))
+  (setq
+   gptel-directives
+   '((default . "You are a large language model living in Emacs and a helpful assistant. Respond concisely.")
+     (code . "Continue the code. No markup, do not repeat parts of the request, no questions, no explanations, ONLY code."))))
 
 (use-package gptel-pi
   :bind (("C-x a i" . gptel-pi)))
