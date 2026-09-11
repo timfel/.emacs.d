@@ -165,7 +165,7 @@ process through TRAMP, so this should also be available in the remote PATH."
               (directory (eglot-jdtls--project-dir root)))
     (when (yes-or-no-p
            (format "Delete JDTLS workspace and cache directory %s? " directory))
-      (call-interactively #'eglot-shutdown)
+      (ignore-errors (call-interactively #'eglot-shutdown))
       (when (file-directory-p directory)
         (delete-directory directory t))
       (message "Deleted JDTLS workspace and cache for %s" root)
