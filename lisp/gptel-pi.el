@@ -154,6 +154,7 @@
 (require 'project)
 (require 'cl-lib)
 (require 'subr-x)
+(require 'eww)
 
 (defvar gptel-rewrite-directives-hook)
 (defvar gptel-post-rewrite-functions)
@@ -1283,6 +1284,38 @@ DIRECTION is either `head' or `tail'.  MAX-BYTES and MAX-LINES default to
                               '(gptel-pi--restrict-tools))
  :confirm-tool-calls 'auto
  :use-tools t)
+
+(gptel-make-tool
+ :name "web_search"
+ :function (lambda (cb query)
+             (let ((mhook nil))
+               (setq mhook
+                     (lambda ()
+                       (ignore-errors (eww-readable))
+                       (let ((s (buffer-string)))
+                         (remove-hook 'eww-after-render-hook mhook)
+                         (kill-buffer (current-buffer))
+                         (funcall cb s))))
+               (add-hook 'eww-after-render-hook mhook)
+               (eww-open-in-new-buffer t query)))
+ :description "Search the web"
+ :args (list '(:name "query" :type string :description "The query to search for"))
+ :async t
+ :category "pi"
+ :confirm nil
+ :include nil)
+
+(gptel-make-preset "help"
+  :system (concat "Help me understand and point out further areas of investigation. "
+                  "Be very concise and technical. "
+                  "Use the provided tools for online and offline investigation.")
+  :tools '("read" "web_search")
+  :use-context nil
+  :confirm-tool-calls nil
+  :use-tools t
+  :include-reasoning nil
+  :temperature 0.1
+  :stream t)
 
 ;;;###autoload
 (defun gptel-pi (&optional prefix)
