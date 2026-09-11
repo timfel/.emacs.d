@@ -72,6 +72,17 @@
           (code . ,(concat "Continue the code. No markup, do not repeat parts of the request, "
                            "no questions, no explanations, ONLY code.")))))
 
+(use-package gptel-annotate
+  :vc (:url "https://github.com/karthink/gptel-annotate"
+            :rev :newest)
+  :bind ("C-x g a" . gptel-annotate)
+  :after gptel)
+
+(use-package gptel-preset-collection
+  :vc (:url "https://github.com/karthink/gptel-preset-collection"
+       :rev :newest)
+  :after gptel)
+
 (use-package gptel-pi
   :commands (gptel-pi))
 

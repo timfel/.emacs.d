@@ -1305,10 +1305,21 @@ DIRECTION is either `head' or `tail'.  MAX-BYTES and MAX-LINES default to
  :confirm nil
  :include nil)
 
+(defun gptel-pi--help-prompt ()
+  (let ((buffer (seq-find
+                 (lambda (b) (not (buffer-local-value 'buffer-read-only b)))
+                 (buffer-list (selected-frame)))))
+    (concat
+     (format "I am working on %s, and I am on line %d. "
+             (buffer-file-name buffer)
+             (with-current-buffer buffer
+               (line-number-at-pos nil t)))
+     "Help me understand and point out further areas of investigation. "
+     "Be very concise and technical. "
+     "Use the provided tools for online and offline investigation.")))
+
 (gptel-make-preset "help"
-  :system (concat "Help me understand and point out further areas of investigation. "
-                  "Be very concise and technical. "
-                  "Use the provided tools for online and offline investigation.")
+  :system #'gptel-pi--help-prompt
   :tools '("read" "web_search")
   :use-context nil
   :confirm-tool-calls nil
