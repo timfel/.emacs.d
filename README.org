@@ -25,35 +25,32 @@ out for me... So there.
 On most platforms, I set everything up using [[https://mise.jdx.dev/][mise]] and starting from my
 [[https://github.com/timfel/dotfiles][dotfiles]], but that doesn't work on Android.
 
-So on Android, I install Nextcloud, Unexpected Keyboard, Termux, and Emacs.
+So on Android, I install Nextcloud, Unexpected Keyboard, and [[https://github.com/timfel/emacs-builder/releases][Emacs]] and [[https://github.com/timfel/emacs-builder/releases][Termux]].
 First, I open Termux and do this:
 
 #+begin_src shell
   pkg update
   pkg upgrade
   pkg install git
-  git clone https://github.com/timfel/.emacs.d
 #+end_src
 
 Then I open Emacs, go to a scratch buffer, paste and eval this:
 
 #+begin_src elisp
   (progn
-    (x-popup-dialog t '("Allow storage access" ("Ok" . t)))
-    (android-request-storage-access)
-    (x-popup-dialog t '("Choose the top-level Nextcloud folder" ("Ok" . t)))
-    (android-request-directory-access)
-    (delete-directory "~/.emacs.d" t)
-    (if (executable-find "git")
-        (shell-command "git clone https://github.com/timfel/.emacs.d ~/.emacs.d")
+    (unless (file-expand-wildcards "/sdcard/Download/")
+      (x-popup-dialog t '("Allow storage access" ("Ok" . t)))
+      (android-request-storage-access))
+    (unless (file-expand-wildcards "/content/storage/com.termux.documents/")
       (x-popup-dialog t '("Choose the top-level Termux folder" ("Ok" . t)))
-      (android-request-directory-access)
-      (let ((config (car (file-expand-wildcards "/content/storage/com.termux.documents/*/.emacs.d"))))
-        (copy-directory config "~/.emacs.d")))
+      (android-request-directory-access))
+    (unless (file-expand-wildcards "/content/storage/org.nextcloud.documents/")
+      (x-popup-dialog t '("Choose the top-level Nextcloud folder" ("Ok" . t)))
+      (android-request-directory-access))
+    (when (executable-find "git")
+        (delete-directory "~/.emacs.d" t)
+        (shell-command "git clone https://github.com/timfel/.emacs.d ~/.emacs.d"))
     (kill-emacs))
 #+end_src
 
-Then start again. Emacs on Android doesn't have git, so unless something is set
-up here, when a VC buffer is open on =~/.emacs.d=, I mapped the volume-up and
-volume-down keys to "push" to the Termux folder and "pull" from the Termux
-folder (just copying), so changes can still be synced.
+Then start again.
