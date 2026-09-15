@@ -12,94 +12,20 @@
               mail-sendmail-undelimit-header expand-mail-aliases)
   :after (timfel)
   :custom
+  (tab-bar-mode 1)
   (tool-bar-mode 1)
   (menu-bar-mode 1)
-  (modifier-bar-mode 1)
-  (tool-bar-position 'top)
+  (modifier-bar-mode nil) ;; show the modifier keys in a separate bar
+  (tool-bar-position 'bottom)
   (tool-bar-always-show-default t)
-  (tool-bar-button-margin 32)
+  (tool-bar-button-margin 48)
   (touch-screen-display-keyboard t)
+  :hook
+  (after-init . (lambda ()
+                  (run-with-idle-timer 1 nil
+                   (lambda () (global-text-scale-adjust +16)))))
   :config
-
-  ;; `mailclient-send-it' uses a `mailto:' URL, but Android Emacs opens
-  ;; those with ACTION_VIEW.  Use ACTION_SEND with the standard email
-  ;; extras instead.  This keeps the implementation in Lisp and lets the
-  ;; configured mail app fill in the recipients, subject, and body.
-  (defun timfel/android-mail-addresses (field)
-    (when-let* ((value (mail-fetch-field field nil t)))
-      (split-string (mail-strip-quoted-names value)
-                    "[ \t\n]*,[ \t\n]*" t)))
-
-  (defun timfel/android-send-it ()
-    "Pass the current message to an Android mail client via `am'."
-    (require 'mail-utils)
-    (require 'sendmail)
-    (let ((mailbuf (current-buffer)) to cc bcc subject body)
-      (with-temp-buffer
-        (insert-buffer-substring mailbuf)
-        (mail-sendmail-undelimit-header)
-        (let ((headers-end (point-marker)))
-          (when mail-aliases
-            (expand-mail-aliases (point-min) headers-end))
-          (save-restriction
-            (narrow-to-region (point-min) headers-end)
-            (setq to (timfel/android-mail-addresses "To")
-                  cc (timfel/android-mail-addresses "Cc")
-                  bcc (timfel/android-mail-addresses "Bcc")
-                  subject (mail-fetch-field "Subject" nil t)))
-          (widen)
-          (goto-char headers-end)
-          (when (looking-at "\n")
-            (forward-char 1))
-          (setq body (buffer-substring-no-properties (point) (point-max)))))
-      (let* ((am (or (executable-find "am")
-                     (and (file-executable-p "/system/bin/am")
-                          "/system/bin/am")))
-             (output-buffer "*Android mail intent*")
-             (args (append
-                    '("start" "-a" "android.intent.action.SEND"
-                      "-t" "text/plain")
-                    (when to
-                      (list "--esa" "android.intent.extra.EMAIL"
-                            (string-join to ",")))
-                    (when cc
-                      (list "--esa" "android.intent.extra.CC"
-                            (string-join cc ",")))
-                    (when bcc
-                      (list "--esa" "android.intent.extra.BCC"
-                            (string-join bcc ",")))
-                    (when subject
-                      (list "--es" "android.intent.extra.SUBJECT" subject))
-                    (list "--es" "android.intent.extra.TEXT" (or body "")))))
-        (unless am
-          (user-error "Cannot find Android am command"))
-        (let ((status (let ((coding-system-for-write 'utf-8))
-                        (apply #'call-process am nil output-buffer nil args))))
-          (unless (and (integerp status) (zerop status))
-            (error "Android mail intent failed (%s): %s"
-                   status
-                   (with-current-buffer output-buffer
-                     (string-trim (buffer-string)))))))))
-  (setq send-mail-function #'timfel/android-send-it)
-
-  (defun timfel/android-start-termux ()
-    "Switch to the Termux activity."
-    (let* ((am (or (executable-find "am")
-                   (and (file-executable-p "/system/bin/am")
-                        "/system/bin/am")))
-           (output-buffer "*Android Termux launch*"))
-      (unless am
-        (user-error "Cannot find Android am command"))
-      (with-current-buffer (get-buffer-create output-buffer)
-        (erase-buffer))
-      (let ((status (call-process am nil output-buffer nil
-                                  "start" "-n"
-                                  "com.termux/.app.TermuxActivity")))
-        (unless (and (integerp status) (zerop status))
-          (error "Could not start Termux (%s): %s"
-                 status
-                 (with-current-buffer output-buffer
-                   (string-trim (buffer-string))))))))
+  (require 'org-capture)
 
   ;; AltGr on the no-name phone keyboard I use sends KEYCODE_*, and there is no
   ;; Meta key, so let's make it usable
@@ -127,107 +53,54 @@
   ;; (set-frame-parameter nil 'fullscreen 'fullboth)
   ;; useful menus
   (setq tool-bar-map '(keymap))
-  (define-key-after tool-bar-map [separator-0] menu-bar-separator)
   (tool-bar-add-item "save" 'save-buffer 'save-buffer)
-  (tool-bar-add-item "close" (lambda ()
-                               (interactive)
-                               (kill-buffer nil))
-                     'kb)
-  (define-key-after tool-bar-map [separator-1] menu-bar-separator)
-  (tool-bar-add-item "back-arrow" 'undo 'undo)
-  (define-key-after tool-bar-map [separator-2] menu-bar-separator)
-  (tool-bar-add-item "home" 'delete-other-windows 'delete-other-windows)
+  (tool-bar-add-item "close"
+                     (lambda ()
+                       (interactive)
+                       (if (> (seq-length (window-list)) 1)
+                           (progn
+                             (call-interactively #'other-window)
+                             (delete-other-windows))
+                         (kill-buffer nil)
+                         (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
+                         (org-fold-show-all)
+                         (goto-char (point-max))))
+                     'close)
+  (define-key-after tool-bar-map [separator-0] menu-bar-separator)
+  (tool-bar-add-item "undo" 'undo 'undo)
+  (tool-bar-add-item "redo" 'redo 'redo)
   (tool-bar-add-item "refresh" 'revert-buffer 'ost)
-  (tool-bar-add-item "new" (lambda ()
-                             (interactive)
-                             (if (derived-mode-p 'org-mode)
-                                 (progn
-                                   (org-capture nil "n")
+  (define-key-after tool-bar-map [separator-1] menu-bar-separator)
+
+  ;; (tool-bar-add-item "outline-close" ;; tood ? 'delete-other-windows 'delete-other-windows)
+  
+  (tool-bar-add-item "mail/spam" (lambda ()
+                                   (interactive)
                                    (delete-other-windows)
-                                   (visual-line-mode t)
-                                   (text-scale-set +2))
-                               (find-file (expand-file-name
-                                           "SyncFolder/notes.org"
-                                           timfel/cloud-storage))
-                               (goto-char (point-max))))
-                     'oc)
-  (tool-bar-add-item "info" 'gptel 'gptel)
-  (tool-bar-add-item "zoom-in" (lambda () (interactive) (global-text-scale-adjust +4)) 'zoomin)
-  (tool-bar-add-item "zoom-out" (lambda () (interactive) (global-text-scale-adjust -4)) 'zoomout)
+                                   (org-agenda nil "a"))
+                     'agenda)
+  (tool-bar-add-item "mail/inbox" (lambda ()
+                                    (interactive)
+                                    (delete-other-windows)
+                                    (org-capture nil "t"))
+                     'todo)
+  (tool-bar-add-item "mail/compose" (lambda ()
+                                      (interactive)
+                                      (delete-other-windows)
+                                      (org-capture nil "n"))
+                     'note)
+  (tool-bar-add-item "mail/reply-all" (lambda ()
+                                        (interactive)
+                                        (delete-other-windows)
+                                        (org-capture nil "m"))
+                     'meeting)
+
+  ;; (tool-bar-add-item "zoom-in" (lambda () (interactive) (global-text-scale-adjust +4)) 'zoomin)
+  ;; (tool-bar-add-item "zoom-out" (lambda () (interactive) (global-text-scale-adjust -4)) 'zoomout)
   :bind
-  (("<volume-down>" . (lambda ()
-                        (interactive)
-                        (let ((modes (cons major-mode local-minor-modes)))
-                          (pcase modes
-                            ((pred (memq 'gptel-mode))
-                             (gptel-send))
-
-                            ((pred (memq 'org-capture-mode)) ;; save org note
-                             (org-capture-finalize)
-                             (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
-                             (goto-char (point-max)))
-
-                            ((pred (memq 'org-mode))
-                             (progn
-                                   (org-capture nil "n")
-                                   (delete-other-windows)
-                                   (visual-line-mode t)
-                                   (text-scale-set +2)))
-
-                            ((pred (memq 'vc-dir-mode))
-                             (if (and (not (executable-find "git"))
-                                      (file-equal-p default-directory "~/.emacs.d"))
-                                 (let ((tgt (car (file-expand-wildcards "/content/storage/com.termux.documents/*/.emacs.d"))))
-                                   (require 'em-unix)
-                                   (declare-function eshell/cp "em-unix")
-                                   (eshell/cp "-f" "-r" tgt "~/"))
-                               (vc-pull)))
-
-                            ((pred (memq 'org-social-ui-mode)) ;; org-social timeline
-                             (with-auto-default (org-social-new-post))
-                             (delete-other-windows)
-                             (visual-line-mode t)
-                             (text-scale-set +2))
-
-                            ((pred (memq 'org-social-mode)) ;; send org-social post
-                             (save-buffer)
-                             (kill-buffer)
-                             (org-social-timeline))
-
-                            (_ nil)))))
-   ("<volume-up>" . (lambda ()
-                      (interactive)
-                      (let ((modes (cons major-mode local-minor-modes)))
-                        (pcase modes
-                          ((pred (memq 'org-capture-mode)) ;; abort org note and show prev notes
-                           (org-capture-kill)
-                           (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
-                           (goto-char (point-max)))
-
-                          ((pred (memq 'vc-dir-mode))
-                           (if (and (not (executable-find "git"))
-                                    (file-equal-p default-directory "~/.emacs.d"))
-                               (let ((tgt (car (file-expand-wildcards "/content/storage/com.termux.documents/*/"))))
-                                 (unless tgt
-                                   (user-error "Cannot find the Termux shared folder"))
-                                 (require 'em-unix)
-                                 (declare-function eshell/rm "em-unix")
-                                 (declare-function eshell/cp "em-unix")
-                                 (message "Pushing to Termux (1/2): removing old Git metadata…")
-                                 (redisplay)
-                                 (eshell/rm "-r" "-f" "~/.emacs.d/.git")
-                                 (message "Pushing to Termux (2/2): copying configuration…")
-                                 (redisplay)
-                                 (eshell/cp "-f" "-r" "~/.emacs.d" tgt)
-                                 (message "Push complete; switching to Termux…")
-                                 (redisplay)
-                                 (timfel/android-start-termux))
-                             (vc-push)))
-
-                          ((pred (memq 'org-social-mode)) ;; cancel org social post
-                           (kill-buffer))
-
-                          (_ nil)))))))
+  (:map org-capture-mode-map
+        ("<volume-down>" . #'org-capture-finalize)
+        ("<volume-up>" . #'org-capture-kill)))
 
 (use-package zone
   :commands (zone-when-idle)
