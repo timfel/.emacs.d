@@ -97,4 +97,15 @@
   (org-agenda-mode . (lambda ()
                        (setq line-spacing '(0.1 . 0.1))))
   :config
+  ;; Android ships the Noto symbol font as split subsets under one family
+  ;; name.  The subset selected by Emacs does not contain all of
+  ;; org-modern's folding glyphs (notably U+2BC6, U+25BF and U+25BE), so use
+  ;; ASCII indicators there rather than displaying glyphless boxes.
+  (when (eq system-type 'android)
+    (setq org-modern-fold-stars
+          '((">" . "v")
+            ("+" . "-")
+            (">" . "v")
+            ("+" . "-")
+            (">" . "v"))))
   (global-org-modern-mode 1))
