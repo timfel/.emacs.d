@@ -90,7 +90,7 @@
   (confirm-kill-emacs 'yes-or-no-p)
   (visible-bell nil)
   (ring-bell-function #'ignore)
-  (delete-by-moving-to-trash (eq system-type 'android))
+  (delete-by-moving-to-trash nil)
   (make-backup-files nil)
   (query-replace-highlight t)
   (search-highlight t)

@@ -26,13 +26,8 @@ On most platforms, I set everything up using [[https://mise.jdx.dev/][mise]] and
 [[https://github.com/timfel/dotfiles][dotfiles]], but that doesn't work on Android.
 
 So on Android, I install Nextcloud, Unexpected Keyboard, and [[https://github.com/timfel/emacs-builder/releases][Emacs]] and [[https://github.com/timfel/emacs-builder/releases][Termux]].
-First, I open Termux and do this:
 
-#+begin_src shell
-  pkg update
-  pkg upgrade
-  pkg install git
-#+end_src
+First, I open Termux once, then close it.
 
 Then I open Emacs, go to a scratch buffer, paste and eval this:
 
@@ -47,10 +42,19 @@ Then I open Emacs, go to a scratch buffer, paste and eval this:
     (unless (file-expand-wildcards "/content/storage/org.nextcloud.documents/")
       (x-popup-dialog t '("Choose the top-level Nextcloud folder" ("Ok" . t)))
       (android-request-directory-access))
-    (when (executable-find "git")
-        (delete-directory "~/.emacs.d" t)
-        (shell-command "git clone https://github.com/timfel/.emacs.d ~/.emacs.d"))
-    (kill-emacs))
+    (let ((termuxpath "/data/data/com.termux/files/usr/bin"))
+      (setenv "PATH" (concat (getenv "PATH") ":"  termuxpath))
+      (add-to-list 'exec-path termuxpath t))
+    (when (executable-find "pkg")
+      (shell-command "pkg update -yy")
+      (shell-command "pkg upgrade -yy")
+      (shell-command "pkg install -yy git gh mise")
+      (shell-command "git clone https://github.com/timfel/dotfiles ~/dotfiles")
+      (shell-command "mise trust ~/dotfiles")
+      (shell-command "mise bootstrap apply --cd ~/dotfiles --force --yes")
+      (delete-directory "~/.emacs.d" t)
+      (shell-command "git clone https://github.com/timfel/.emacs.d ~/.emacs.d")
+      (kill-emacs)))
 #+end_src
 
 Then start again.

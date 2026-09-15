@@ -7,7 +7,8 @@
   :defines (timfel/cloud-storage android-intercept-control-space)
   :functions (org-capture-kill org-capture-finalize org-capture with-auto-default
               timfel/android-mail-addresses timfel/android-send-it
-              timfel/android-start-termux
+              timfel/android-start-termux timfel/android-set-window-margins
+              global-visual-wrap-prefix-mode
               mail-fetch-field mail-strip-quoted-names
               mail-sendmail-undelimit-header expand-mail-aliases)
   :after (timfel)
@@ -20,6 +21,8 @@
   (tool-bar-always-show-default t)
   (tool-bar-button-margin 48)
   (touch-screen-display-keyboard t)
+  (auto-save-default nil)
+  (auto-save-visited-mode nil)
   :hook
   (after-init . (lambda ()
                   (run-with-idle-timer 1 nil
@@ -39,7 +42,22 @@
   (define-key key-translation-map (kbd "S-<KEYCODE_Y>") (kbd "Ü"))
 
   (setq android-intercept-control-space nil)
+  ;; Make wrapped prose easier to read on a phone.  `line-spacing' is the
+  ;; extra spacing below each screen line; `visual-wrap-prefix-mode' keeps
+  ;; continuation lines aligned with the text after a list/comment prefix.
+  (require 'visual-wrap)
+  (setq-default line-spacing 0.2
+                visual-wrap-extra-indent 0)
+  (defun timfel/android-set-window-margins (&rest _)
+    (dolist (window (window-list nil 'nomini))
+      (set-window-margins window 1 1)))
+  (add-hook 'window-configuration-change-hook
+            #'timfel/android-set-window-margins)
+  (add-hook 'window-buffer-change-functions
+            #'timfel/android-set-window-margins)
+  (timfel/android-set-window-margins)
   (global-visual-line-mode t)
+  (global-visual-wrap-prefix-mode 1)
   (setq visual-line-fringe-indicators
         '(left-curly-arrow right-curly-arrow))
   ;; we do not have permissions above our own and some shared folders in
@@ -130,6 +148,15 @@
   :commands org-mode
   :functions org-agenda-files
   :mode (("\\.org$" . org-mode))
+  :custom-face
+  (org-level-1 ((t (:inherit outline-1 :height 1.35))))
+  (org-level-2 ((t (:inherit outline-2 :height 1.25))))
+  (org-level-3 ((t (:inherit outline-3 :height 1.15))))
+  (org-level-4 ((t (:inherit outline-4 :height 1.08))))
+  (org-level-5 ((t (:inherit outline-5 :height 1.03))))
+  (org-level-6 ((t (:inherit outline-6 :height 1.0))))
+  (org-level-7 ((t (:inherit outline-7 :height 1.0))))
+  (org-level-8 ((t (:inherit outline-8 :height 1.0))))
   :init
   :bind (("C-c c" . org-capture)
          ("C-c m" . (lambda () (interactive) (org-capture nil "m")))
@@ -174,6 +201,8 @@
   (org-archive-mark-done t)
   (org-image-actual-width (list 600))
   (org-log-done 'time)
+  (org-fontify-whole-heading-line t)
+  (org-fontify-quote-and-verse-blocks t)
   (org-export-backends '(ascii md html latex))
   (org-hide-emphasis-markers t)
   (org-link-elisp-skip-confirm-regexp
