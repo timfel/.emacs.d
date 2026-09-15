@@ -4,8 +4,8 @@
 (use-package android
   :if (eq system-type 'android)
   :no-require t
-  :defines (timfel/cloud-storage android-intercept-control-space
-            touch-screen-current-tool org-capture-mode-map)
+  :defines (timfel/cloud-storage android-intercept-control-space touch-screen-display-keyboard
+            touch-screen-current-tool org-capture-mode-map visual-wrap-extra-indent)
   :functions (org-capture-kill org-capture-finalize org-capture with-auto-default
               timfel/android-mail-addresses timfel/android-send-it
               timfel/android-start-termux timfel/android-set-window-margins
@@ -16,25 +16,81 @@
               mail-fetch-field mail-strip-quoted-names
               mail-sendmail-undelimit-header expand-mail-aliases)
   :after (timfel)
-  :custom
-  (tool-bar-mode 1)
-  (menu-bar-mode 1)
-  (modifier-bar-mode nil) ;; show the modifier keys in a separate bar
-  (tool-bar-position 'bottom)
-  (tool-bar-always-show-default t)
-  (tool-bar-button-margin 48)
-  (touch-screen-display-keyboard t)
-  (auto-save-default nil)
-  (auto-save-visited-mode nil)
   :hook
   (after-init . (lambda ()
-                  (run-with-idle-timer 1 nil
+                  (run-with-idle-timer
+                   1 nil
                    (lambda () (global-text-scale-adjust +16)))))
   :config
-  (require 'org-capture)
 
-  ;; AltGr on the no-name phone keyboard I use sends KEYCODE_*, and there is no
-  ;; Meta key, so let's make it usable
+  ;; Tap targets for finger use
+  (tool-bar-mode 1)
+  (menu-bar-mode 1)
+  (modifier-bar-mode nil) ;; and extra bar with Meta/Ctrl/Super buttons if the android kbd doesn't have them
+  (setq tool-bar-position 'bottom)
+  (setq tool-bar-always-show-default t)
+  (setq tool-bar-button-margin 48)
+  (setq touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
+  (set-face-attribute 'menu nil :height 0.8)
+  (setq tool-bar-map '(keymap))
+  (tool-bar-add-item "save" 'save-buffer 'save-buffer)
+  (tool-bar-add-item "close" ;; remove window splits if any, otherwise bury buffer and go back to notes
+                     (lambda ()
+                       (interactive)
+                       (if (> (seq-length (window-list)) 1)
+                           (progn
+                             (call-interactively #'other-window)
+                             (delete-other-windows))
+                         (bury-buffer)
+                         (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
+                         (org-fold-show-all)
+                         (goto-char (point-max))))
+                     'close)
+  (define-key-after tool-bar-map [separator-0] menu-bar-separator)
+  (tool-bar-add-item "undo" 'undo 'undo)
+  (tool-bar-add-item "redo" 'redo 'redo)
+  (tool-bar-add-item "describe" 'context-menu-open 'context-menu-open)
+  (define-key-after tool-bar-map [separator-1] menu-bar-separator)
+  (require 'org-capture)
+  (tool-bar-add-item "mail/spam"
+                     (lambda () (interactive)
+                       (delete-other-windows)
+                       (org-agenda nil "a"))
+                     'agenda)
+  (tool-bar-add-item "mail/inbox"
+                     (lambda () (interactive)
+                       (delete-other-windows)
+                       (org-capture nil "t"))
+                     'todo)
+  (tool-bar-add-item "mail/compose"
+                     (lambda () (interactive)
+                       (delete-other-windows)
+                       (org-capture nil "n"))
+                     'note)
+  (tool-bar-add-item "mail/reply-all"
+                     (lambda () (interactive)
+                       (delete-other-windows)
+                       (org-capture nil "m"))
+                     'meeting)
+
+  ;; No auto-save and no backup files
+  (setq auto-save-default nil)
+  (setq auto-save-visited-mode nil)
+  (setq make-backup-files nil)
+
+  ;; Make text easier to read on a phone.
+  (require 'visual-wrap)
+  (setq-default line-spacing '(0.1 . 0.1))
+  (setq visual-wrap-extra-indent 0)
+  (modify-all-frames-parameters '((internal-border-width . 32)))
+  (set-face-background 'fringe (face-attribute 'default :background))
+  (global-visual-line-mode t)
+  (global-visual-wrap-prefix-mode 1)
+  (global-hide-mode-line-mode 1)
+  (setq visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
+
+  ;; Keyboard setup for the the no-name bluetooth phone keyboard I use. AltGr
+  ;; sends KEYCODE_*, and there is no Meta key, so let's make it usable
   (define-key key-translation-map (kbd "<KEYCODE_SPACE>") (kbd "ESC"))
   (define-key key-translation-map (kbd "<KEYCODE_S>") (kbd "ß"))
   (define-key key-translation-map (kbd "<KEYCODE_Q>") (kbd "ä"))
@@ -43,102 +99,31 @@
   (define-key key-translation-map (kbd "S-<KEYCODE_Q>") (kbd "Ä"))
   (define-key key-translation-map (kbd "S-<KEYCODE_P>") (kbd "Ö"))
   (define-key key-translation-map (kbd "S-<KEYCODE_Y>") (kbd "Ü"))
-
   (setq android-intercept-control-space nil)
-  ;; Make Android menus easier to read on the phone.
-  (set-face-attribute 'menu nil :height 0.8)
-  ;; Make wrapped prose easier to read on a phone.  `line-spacing' is the
-  ;; extra spacing below each screen line; `visual-wrap-prefix-mode' keeps
-  ;; continuation lines aligned with the text after a list/comment prefix.
-  (require 'visual-wrap)
-  (setq-default line-spacing 0.2
-                visual-wrap-extra-indent 0)
-  (defun timfel/android-set-window-margins (&rest _)
-    (dolist (window (window-list nil 'nomini))
-      ;; Put the fringe at the outside edge, with the margin between it and
-      ;; the buffer text.  Keep this setting when the window changes buffers.
-      (set-window-fringes window nil nil t t)
-      (set-window-margins window 1 1)))
-  (add-hook 'window-configuration-change-hook
-            #'timfel/android-set-window-margins)
-  (add-hook 'window-buffer-change-functions
-            #'timfel/android-set-window-margins)
-  (timfel/android-set-window-margins)
-  ;; A long press is also the start of drag selection.  If the finger is
-  ;; released without moving, turn that same gesture into a context menu.
-  ;; The touch-screen translator consumes touchscreen-end internally, so do
-  ;; this around its point-up handler rather than binding touchscreen-end.
+
+  ;; A long press is also the start of drag selection. If the finger is
+  ;; released without moving, turn that same gesture into a context menu. The
+  ;; touch-screen translator consumes touchscreen-end internally, so do this
+  ;; around its point-up handler rather than binding touchscreen-end.
   (require 'touch-screen)
   (require 'mouse)
-  (defun timfel/android-touch-screen-point-up
-      (orig point prefix canceled)
-    (if (and (eq (nth 3 touch-screen-current-tool) 'held)
-             (not canceled))
-        (let ((last-input-event (list 'mouse-3 (cdr point))))
-          (context-menu-open))
-      (funcall orig point prefix canceled)))
   (advice-add #'touch-screen-handle-point-up
-              :around #'timfel/android-touch-screen-point-up)
-  (global-visual-line-mode t)
-  (global-visual-wrap-prefix-mode 1)
-  (global-hide-mode-line-mode 1)
-  (setq visual-line-fringe-indicators
-        '(left-curly-arrow right-curly-arrow))
-  ;; we do not have permissions above our own and some shared folders in
-  ;; emacs on android
+              :around
+              (lambda (orig point prefix canceled)
+                (if (and (eq (nth 3 touch-screen-current-tool) 'held)
+                         (not canceled))
+                    (let ((last-input-event (list 'mouse-3 (cdr point))))
+                      (context-menu-open))
+                  (funcall orig point prefix canceled))))
+
+  ;; We do not have permissions above our own and some shared folders in emacs
+  ;; on android
   (setq locate-dominating-stop-dir-regexp
         (concat locate-dominating-stop-dir-regexp
                 "\\|\\`/data/data/org.gnu.emacs/\\'"
                 "\\|\\`/data/data/com.termux/\\'"
                 "\\|\\`/content/storage/\\'"))
-  ;; fullscreen
-  ;; (set-frame-parameter nil 'fullscreen 'fullboth)
-  ;; useful menus
-  (setq tool-bar-map '(keymap))
-  (tool-bar-add-item "save" 'save-buffer 'save-buffer)
-  (tool-bar-add-item "close"
-                     (lambda ()
-                       (interactive)
-                       (if (> (seq-length (window-list)) 1)
-                           (progn
-                             (call-interactively #'other-window)
-                             (delete-other-windows))
-                         (kill-buffer nil)
-                         (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
-                         (org-fold-show-all)
-                         (goto-char (point-max))))
-                     'close)
-  (define-key-after tool-bar-map [separator-0] menu-bar-separator)
-  (tool-bar-add-item "undo" 'undo 'undo)
-  (tool-bar-add-item "redo" 'redo 'redo)
-  (tool-bar-add-item "refresh" 'revert-buffer 'ost)
-  (define-key-after tool-bar-map [separator-1] menu-bar-separator)
 
-  ;; (tool-bar-add-item "outline-close" ;; tood ? 'delete-other-windows 'delete-other-windows)
-  
-  (tool-bar-add-item "mail/spam" (lambda ()
-                                   (interactive)
-                                   (delete-other-windows)
-                                   (org-agenda nil "a"))
-                     'agenda)
-  (tool-bar-add-item "mail/inbox" (lambda ()
-                                    (interactive)
-                                    (delete-other-windows)
-                                    (org-capture nil "t"))
-                     'todo)
-  (tool-bar-add-item "mail/compose" (lambda ()
-                                      (interactive)
-                                      (delete-other-windows)
-                                      (org-capture nil "n"))
-                     'note)
-  (tool-bar-add-item "mail/reply-all" (lambda ()
-                                        (interactive)
-                                        (delete-other-windows)
-                                        (org-capture nil "m"))
-                     'meeting)
-
-  ;; (tool-bar-add-item "zoom-in" (lambda () (interactive) (global-text-scale-adjust +4)) 'zoomin)
-  ;; (tool-bar-add-item "zoom-out" (lambda () (interactive) (global-text-scale-adjust -4)) 'zoomout)
   :bind
   (:map org-capture-mode-map
         ("<volume-down>" . #'org-capture-finalize)
@@ -225,10 +210,14 @@
   (org-archive-mark-done t)
   (org-image-actual-width (list 600))
   (org-log-done 'time)
+  (org-insert-heading-respect-content t)
+  (org-special-ctrl-a/e t)
   (org-fontify-whole-heading-line t)
   (org-fontify-quote-and-verse-blocks t)
   (org-export-backends '(ascii md html latex))
   (org-hide-emphasis-markers t)
+  (org-pretty-entities t)
+  (org-ellipsis "…")
   (org-link-elisp-skip-confirm-regexp
    (concat
     "^(jira-detail-show-issue \"[^\"]+\")$"

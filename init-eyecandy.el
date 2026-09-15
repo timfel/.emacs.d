@@ -87,3 +87,14 @@
   :after zone
   :config
   (setq zone-programs (vconcat [zone-rainbow] zone-programs)))
+
+(use-package org-modern
+  :ensure t
+  :after org
+  :hook
+  (org-mode . (lambda ()
+                (setq line-spacing '(0.1 . 0.1))))
+  (org-agenda-mode . (lambda ()
+                       (setq line-spacing '(0.1 . 0.1))))
+  :config
+  (global-org-modern-mode 1))
