@@ -26,11 +26,11 @@
   ;; Tap targets for finger use
   (tool-bar-mode 1)
   (menu-bar-mode 1)
-  (modifier-bar-mode nil) ;; and extra bar with Meta/Ctrl/Super buttons if the android kbd doesn't have them
-  (setq tool-bar-position 'bottom)
-  (setq tool-bar-always-show-default t)
-  (setq tool-bar-button-margin 48)
-  (setq touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
+  (modifier-bar-mode -1) ;; and extra bar with Meta/Ctrl/Super buttons if the android kbd doesn't have them
+  (customize-set-variable 'tool-bar-position 'bottom)
+  (customize-set-variable 'tool-bar-always-show-default t)
+  (customize-set-variable 'tool-bar-button-margin 48)
+  (customize-set-variable 'touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
   (set-face-attribute 'menu nil :height 0.8)
   (setq tool-bar-map '(keymap))
   (tool-bar-add-item "save" 'save-buffer 'save-buffer)
@@ -74,20 +74,20 @@
                      'meeting)
 
   ;; No auto-save and no backup files
-  (setq auto-save-default nil)
-  (setq auto-save-visited-mode nil)
-  (setq make-backup-files nil)
+  (customize-set-variable 'auto-save-default nil)
+  (customize-set-variable 'auto-save-visited-mode nil)
+  (customize-set-variable 'make-backup-files nil)
 
   ;; Make text easier to read on a phone.
   (require 'visual-wrap)
-  (setq-default line-spacing '(0.1 . 0.1))
-  (setq visual-wrap-extra-indent 0)
+  (customize-set-variable 'line-spacing '(0.1 . 0.1))
+  (customize-set-variable 'visual-wrap-extra-indent 0)
   (modify-all-frames-parameters '((internal-border-width . 32)))
   (set-face-background 'fringe (face-attribute 'default :background))
   (global-visual-line-mode t)
   (global-visual-wrap-prefix-mode 1)
   (global-hide-mode-line-mode 1)
-  (setq visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
+  (customize-set-variable 'visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
 
   ;; Keyboard setup for the the no-name bluetooth phone keyboard I use. AltGr
   ;; sends KEYCODE_*, and there is no Meta key, so let's make it usable
@@ -99,7 +99,7 @@
   (define-key key-translation-map (kbd "S-<KEYCODE_Q>") (kbd "Ä"))
   (define-key key-translation-map (kbd "S-<KEYCODE_P>") (kbd "Ö"))
   (define-key key-translation-map (kbd "S-<KEYCODE_Y>") (kbd "Ü"))
-  (setq android-intercept-control-space nil)
+  (customize-set-variable 'android-intercept-control-space nil)
 
   ;; A long press is also the start of drag selection. If the finger is
   ;; released without moving, turn that same gesture into a context menu. The
