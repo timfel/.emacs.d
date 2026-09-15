@@ -4,16 +4,19 @@
 (use-package android
   :if (eq system-type 'android)
   :no-require t
-  :defines (timfel/cloud-storage android-intercept-control-space)
+  :defines (timfel/cloud-storage android-intercept-control-space
+            touch-screen-current-tool org-capture-mode-map)
   :functions (org-capture-kill org-capture-finalize org-capture with-auto-default
               timfel/android-mail-addresses timfel/android-send-it
               timfel/android-start-termux timfel/android-set-window-margins
+              timfel/android-touch-screen-point-up
               global-visual-wrap-prefix-mode
+              org-fold-show-all
+              touch-screen-handle-point-up context-menu-open
               mail-fetch-field mail-strip-quoted-names
               mail-sendmail-undelimit-header expand-mail-aliases)
   :after (timfel)
   :custom
-  (tab-bar-mode 1)
   (tool-bar-mode 1)
   (menu-bar-mode 1)
   (modifier-bar-mode nil) ;; show the modifier keys in a separate bar
@@ -43,7 +46,7 @@
 
   (setq android-intercept-control-space nil)
   ;; Make Android menus easier to read on the phone.
-  (set-face-attribute 'menu nil :height 1.5)
+  (set-face-attribute 'menu nil :height 0.8)
   ;; Make wrapped prose easier to read on a phone.  `line-spacing' is the
   ;; extra spacing below each screen line; `visual-wrap-prefix-mode' keeps
   ;; continuation lines aligned with the text after a list/comment prefix.
@@ -61,8 +64,24 @@
   (add-hook 'window-buffer-change-functions
             #'timfel/android-set-window-margins)
   (timfel/android-set-window-margins)
+  ;; A long press is also the start of drag selection.  If the finger is
+  ;; released without moving, turn that same gesture into a context menu.
+  ;; The touch-screen translator consumes touchscreen-end internally, so do
+  ;; this around its point-up handler rather than binding touchscreen-end.
+  (require 'touch-screen)
+  (require 'mouse)
+  (defun timfel/android-touch-screen-point-up
+      (orig point prefix canceled)
+    (if (and (eq (nth 3 touch-screen-current-tool) 'held)
+             (not canceled))
+        (let ((last-input-event (list 'mouse-3 (cdr point))))
+          (context-menu-open))
+      (funcall orig point prefix canceled)))
+  (advice-add #'touch-screen-handle-point-up
+              :around #'timfel/android-touch-screen-point-up)
   (global-visual-line-mode t)
   (global-visual-wrap-prefix-mode 1)
+  (global-hide-mode-line-mode 1)
   (setq visual-line-fringe-indicators
         '(left-curly-arrow right-curly-arrow))
   ;; we do not have permissions above our own and some shared folders in
