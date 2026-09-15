@@ -31,7 +31,9 @@
   (customize-set-variable 'tool-bar-always-show-default t)
   (customize-set-variable 'tool-bar-button-margin 48)
   (customize-set-variable 'touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
-  (set-face-attribute 'menu nil :height 0.8)
+  (run-with-idle-timer
+   1 nil
+   (lambda () (set-face-attribute 'menu nil :height 0.8)))
   (setq tool-bar-map '(keymap))
   (tool-bar-add-item "save" 'save-buffer 'save-buffer)
   (tool-bar-add-item "close" ;; remove window splits if any, otherwise bury buffer and go back to notes
@@ -49,7 +51,12 @@
   (define-key-after tool-bar-map [separator-0] menu-bar-separator)
   (tool-bar-add-item "undo" 'undo 'undo)
   (tool-bar-add-item "redo" 'redo 'redo)
-  (tool-bar-add-item "describe" 'context-menu-open 'context-menu-open)
+  (tool-bar-add-item "describe"
+                     (lambda ()
+                       (interactive)
+                       (let ((last-input-event nil))
+                         (context-menu-open)))
+                     'context-menu-open)
   (define-key-after tool-bar-map [separator-1] menu-bar-separator)
   (require 'org-capture)
   (tool-bar-add-item "mail/spam"
@@ -83,7 +90,9 @@
   (customize-set-variable 'line-spacing '(0.1 . 0.1))
   (customize-set-variable 'visual-wrap-extra-indent 0)
   (modify-all-frames-parameters '((internal-border-width . 32)))
-  (set-face-background 'fringe (face-attribute 'default :background))
+  (run-with-idle-timer
+   1 nil
+   (lambda () (set-face-background 'fringe (face-attribute 'default :background))))
   (global-visual-line-mode t)
   (global-visual-wrap-prefix-mode 1)
   (global-hide-mode-line-mode 1)

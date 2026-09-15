@@ -177,20 +177,36 @@
   ;; Use dedicated fallback fonts for Unicode symbols and emoji.  In
   ;; particular, do not map the emoji pictograph range to Segoe UI Symbol:
   ;; that font only covers part of the range and can mask better fallbacks.
-  (when-let* ((emoji-font
-               (seq-find (lambda (font) (member font (font-family-list)))
-                         '("Apple Color Emoji"
-                           "Noto Color Emoji"
-                           "Noto Emoji"
-                           "Segoe UI Emoji"
-                           "Symbola"))))
-    (set-fontset-font t 'emoji emoji-font))
-  (when-let* ((symbol-font
-               (seq-find (lambda (font) (member font (font-family-list)))
-                         '("Segoe UI Symbol"
-                           "Apple Symbols"
-                           "Symbola"))))
-    (set-fontset-font t 'symbol symbol-font))
+  ;; Android normally provides these as Noto fonts, rather than the fonts
+  ;; available on desktop systems.  Its sfnt-android backend cannot render
+  ;; color/OpenType fonts, so do not select Noto Color Emoji there.
+  (let ((families (font-family-list)))
+    (when-let* ((emoji-font
+                 (seq-find (lambda (font) (member font families))
+                           (if (eq system-type 'android)
+                               '("Noto Emoji" "Symbola")
+                             '("Apple Color Emoji"
+                               "Noto Color Emoji"
+                               "Noto Emoji"
+                               "Segoe UI Emoji"
+                               "Symbola")))))
+      (set-fontset-font t 'emoji emoji-font))
+    ;; The two Noto symbol fonts complement each other: Symbols 2 contains
+    ;; the geometric bullets and supplemental arrows, while Symbols contains
+    ;; some of the older miscellaneous symbols used by org-modern.
+    (let ((symbol-fonts
+           (seq-filter (lambda (font) (member font families))
+                       '("Noto Sans Symbols2"
+                         "Noto Sans Symbols 2"
+                         "Noto Sans Symbols"
+                         "Noto Sans Math"
+                         "Segoe UI Symbol"
+                         "Apple Symbols"
+                         "Symbola"))))
+      (when symbol-fonts
+        (set-fontset-font t 'symbol (car symbol-fonts))
+        (dolist (font (cdr symbol-fonts))
+          (set-fontset-font t 'symbol font nil 'append)))))
 
   (defun timfel/set-frame-faces ()
     (cond
