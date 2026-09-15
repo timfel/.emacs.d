@@ -42,6 +42,8 @@
   (define-key key-translation-map (kbd "S-<KEYCODE_Y>") (kbd "Ü"))
 
   (setq android-intercept-control-space nil)
+  ;; Make Android menus easier to read on the phone.
+  (set-face-attribute 'menu nil :height 1.5)
   ;; Make wrapped prose easier to read on a phone.  `line-spacing' is the
   ;; extra spacing below each screen line; `visual-wrap-prefix-mode' keeps
   ;; continuation lines aligned with the text after a list/comment prefix.
@@ -50,6 +52,9 @@
                 visual-wrap-extra-indent 0)
   (defun timfel/android-set-window-margins (&rest _)
     (dolist (window (window-list nil 'nomini))
+      ;; Put the fringe at the outside edge, with the margin between it and
+      ;; the buffer text.  Keep this setting when the window changes buffers.
+      (set-window-fringes window nil nil t t)
       (set-window-margins window 1 1)))
   (add-hook 'window-configuration-change-hook
             #'timfel/android-set-window-margins)
