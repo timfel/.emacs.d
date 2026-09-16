@@ -215,7 +215,10 @@
      ((eq window-system 'w32)
       (set-face-attribute 'default nil :family "Consolas" :height 105))
      ((eq system-type 'android)
-      (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120))))
+      (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120))
+     (set-face-attribute 'fringe nil :background nil)
+     (let ((w (* 2 (string-pixel-width "m"))))
+       (customize-set-variable 'fringe-mode (cons w w)))))
 
   (cond
    ((display-graphic-p) (run-with-idle-timer 0 nil #'timfel/set-frame-faces))
