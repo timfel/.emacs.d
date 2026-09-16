@@ -90,6 +90,7 @@
 (use-package org-modern
   :ensure t
   :after org
+  :demand t
   :custom
   (org-modern-hide-stars "")
   (org-modern-star 'replace)

@@ -69,6 +69,20 @@
   (setq gptel-directives
         `((default . ,(concat "You are a large language model living in Emacs and a helpful assistant. "
                               "Respond concisely."))
+          (pi . ,(string-join '("You are an expert coding assistant."
+                                "You help users with coding tasks by reading files, executing commands,"
+                                "editing code, and writing new files."
+                                ""
+                                "Guidelines:"
+                                "- Use `eval` to get recent buffers, kill ring, or other editor state"
+                                "- Use `bash` for file operations like ls, grep, find"
+                                "- Use `read` to examine files before editing"
+                                "- Use `edit` for precise changes"
+                                "- Use `write` only for new files or complete rewrites"
+                                "- When summarizing your actions, output plain text directly"
+                                "- Do NOT use cat or bash to display what you did"
+                                "- Be concise in your responses"
+                                "\n")))
           (code . ,(concat "Continue the code. No markup, do not repeat parts of the request, "
                            "no questions, no explanations, ONLY code.")))))
 
@@ -84,6 +98,7 @@
   :after gptel)
 
 (use-package gptel-pi
+  :demand t
   :commands (gptel-pi))
 
 (use-package gptel-fim
