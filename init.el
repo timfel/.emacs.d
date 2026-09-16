@@ -215,7 +215,7 @@
       (set-face-attribute 'default nil :family "Consolas" :height 105))
      ((eq system-type 'android)
       (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120)))
-    (set-face-attribute 'fringe nil :background nil)
+    (set-face-background 'fringe (face-attribute 'default :background))
     (let ((w (* 2 (string-pixel-width "m"))))
       (customize-set-variable 'fringe-mode (cons w w))))
 

@@ -127,6 +127,8 @@
   (dslide-breadcrumb-separator " ▻ ")
   (dslide-present-frame-parameters '((fullscreen . fullboth)))
   (dslide-slide-in-effect nil)
+  :config
+  (customize-set-variable 'dslide-default-actions (seq-remove (lambda (e) (eq e 'dslide-action-babel)) dslide-default-actions))
   :hook
   (dslide-develop
    . (lambda ()
@@ -196,7 +198,8 @@
                                 (cons face
                                       (face-attribute face :height frame
                                                       'default)))
-                              (face-list)))
+                              ;; (face-list)
+                              '(default)))
                (when (numberp (cdr face-height))
                  (set-face-attribute
                   (car face-height) frame :height
