@@ -105,7 +105,7 @@
   (view-lossage-auto-refresh t) ; EMACS-31: live-updating C-h l, great for teaching/debugging
   (initial-scratch-message ";; Welcome to your emacs.
 ;; Some useful expressions:
-;;   Get all fonts: (all-the-icons-install-fonts) (nerd-icons-install-fonts)
+;;   Get all fonts: (all-the-icons-install-fonts) (nerd-icons-install-fonts) (noto-install-fonts)
 ;;   Resume desktop
 ;;     (call-interactively (quote desktop-change-dir))
 ;;     (desktop-save-mode 1)
@@ -180,17 +180,16 @@
   ;; Android normally provides these as Noto fonts, rather than the fonts
   ;; available on desktop systems.  Its sfnt-android backend cannot render
   ;; color/OpenType fonts, so do not select Noto Color Emoji there.
+  (setq use-default-font-for-symbols nil)
   (let ((families (font-family-list)))
     (when-let* ((emoji-font
                  (seq-find (lambda (font) (member font families))
-                           (if (eq system-type 'android)
-                               '("Noto Emoji" "Symbola")
-                             '("Apple Color Emoji"
-                               "Noto Color Emoji"
-                               "Noto Emoji"
-                               "Segoe UI Emoji"
-                               "Symbola")))))
-      (set-fontset-font t 'emoji emoji-font))
+                           '("Apple Color Emoji"
+                             "Noto Color Emoji"
+                             "Noto Emoji"
+                             "Segoe UI Emoji"
+                             "Symbola"))))
+      (set-fontset-font t 'emoji emoji-font nil 'prepend))
     ;; The two Noto symbol fonts complement each other: Symbols 2 contains
     ;; the geometric bullets and supplemental arrows, while Symbols contains
     ;; some of the older miscellaneous symbols used by org-modern.
@@ -204,7 +203,7 @@
                          "Apple Symbols"
                          "Symbola"))))
       (when symbol-fonts
-        (set-fontset-font t 'symbol (car symbol-fonts))
+        (set-fontset-font t 'symbol (car symbol-fonts) nil 'prepend)
         (dolist (font (cdr symbol-fonts))
           (set-fontset-font t 'symbol font nil 'append)))))
 
