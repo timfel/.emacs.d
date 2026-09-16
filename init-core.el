@@ -45,6 +45,7 @@
                              (delete-other-windows))
                          (bury-buffer)
                          (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
+                         (revert-buffer)
                          (org-fold-show-all)
                          (goto-char (point-max))))
                      'close)

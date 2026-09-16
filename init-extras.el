@@ -121,9 +121,7 @@
   (setq org-tree-slide-modeline-display 'outside)
   (setq org-tree-slide-skip-done nil)
   (setq org-tree-slide-skip-comments t)
-  :bind (:map org-mode-map
-         ("<f5>" . org-tree-slide-mode)
-         :map org-tree-slide-mode-map
+  :bind (:map org-tree-slide-mode-map
          ("<f5>" . (lambda ()
                      (interactive)
                      (org-tree-slide-mode 0)

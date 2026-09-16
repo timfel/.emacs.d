@@ -79,8 +79,7 @@
 
 (use-package hide-mode-line
   :ensure t
-  :hook ((completion-list-mode . hide-mode-line-mode)
-         (org-tree-slide-mode . hide-mode-line-mode)))
+  :hook ((completion-list-mode . hide-mode-line-mode)))
 
 (use-package zone-rainbow
   :ensure t
@@ -92,7 +91,11 @@
   :ensure t
   :after org
   :custom
-  (org-modern-hide-stars " ")
+  (org-modern-hide-stars "")
+  (org-modern-star 'replace)
+  (org-modern-replace-stars "▶▷▹●◉○◌◆◈◇✳⋅")
+  :bind (:map org-mode-map
+         ("<f5>" . dslide-deck-present))
   :hook
   (org-mode . (lambda ()
                 (unless (eq system-type 'android)
@@ -103,17 +106,11 @@
                        (unless (eq system-type 'android)
                          (setq line-spacing '(0.1 . 0.1)))))
   :config
-  ;; Android ships the Noto symbol font as split subsets under one family
-  ;; name.  The subset selected by Emacs does not contain all of
-  ;; org-modern's folding glyphs (notably U+2BC6, U+25BF and U+25BE), so use
-  ;; ASCII indicators there rather than displaying glyphless boxes.
-  (when (eq system-type 'android)
-    (setq org-modern-fold-stars
-          '((">" . "v")
-            ("+" . "-")
-            (">" . "v")
-            ("+" . "-")
-            (">" . "v"))))
+  (seq-do
+   (lambda (i)
+     (set-face-attribute (intern (format "org-level-%d" i))
+                         nil :height (/ (- 28 i) 20.0)))
+   (number-sequence 1 8))
   (global-org-modern-mode 1))
 
 (use-package dslide
@@ -207,6 +204,10 @@
              (set-frame-parameter
               frame 'internal-border-width (* 2 (frame-char-height frame))))
            (set-window-fringes window 0 0 t t)
+           (internal-show-cursor window nil)
+           (set-face-attribute 'org-verse frame :height 1.5)
+           (set-face-attribute 'org-block-begin-line frame :foreground (face-attribute 'org-block :background))
+           (set-face-attribute 'org-block-end-line frame :foreground (face-attribute 'org-block :background))
            ;; Margins are specified in character cells.  Calculate them from
            ;; the actual width of an `m' in the now-scaled default face.
            (let* ((fringes (window-fringes window))
