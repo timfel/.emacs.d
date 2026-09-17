@@ -21,8 +21,9 @@
                   (run-with-idle-timer
                    1 nil
                    (lambda () (global-text-scale-adjust +16)))))
+  :custom
+  (browse-url-browser-function #'browse-url-default-android-browser)
   :config
-
   ;; Tap targets for finger use
   (tool-bar-mode 1)
   (menu-bar-mode 1)
@@ -103,6 +104,36 @@
               ((yes-or-no-p "Do you want to create `fonts' folder?")))
     (make-symbolic-link link target)
     (message "Symbolic link created: %s -> %s" link target))
+
+  ;; Android's sfnt driver only sees TrueType fonts in ~/fonts.  The Android
+  ;; setup in README.org puts the managed copies in ~/.emacs.d/fonts and the
+  ;; block above exposes that directory as ~/fonts.
+  (setq use-default-font-for-symbols nil)
+  (add-to-list 'face-ignored-fonts "Noto Color Emoji")
+  (let ((families (font-family-list)))
+    (when-let* ((emoji-font
+                 (seq-find (lambda (font) (member font families))
+                           '("Noto Emoji" "Symbola"))))
+      ;; Replace the default emoji mapping rather than prepending to it, so
+      ;; Android's color emoji font cannot win the fallback lookup.
+      (set-fontset-font t 'emoji emoji-font))
+    (let ((symbol-fonts
+           (seq-filter (lambda (font) (member font families))
+                       '("Noto Sans Symbols2"
+                         "Noto Sans Symbols 2"
+                         "Noto Sans Symbols"
+                         "Noto Sans Math"
+                         "Symbola"))))
+      (when symbol-fonts
+        (set-fontset-font t 'symbol (car symbol-fonts))
+        (dolist (font (cdr symbol-fonts))
+          (set-fontset-font t 'symbol font nil 'append)))))
+  (let ((font (if (member "Noto Sans Mono" (font-family-list))
+                  "Noto Sans Mono"
+                "Droid Sans Mono")))
+    (set-face-attribute 'default nil :family font :height 120)
+    (set-face-attribute 'fixed-pitch nil :family font)
+    (set-fontset-font t nil font))
 
   ;; never make me type "yes"
   (customize-set-variable 'use-short-answers t)

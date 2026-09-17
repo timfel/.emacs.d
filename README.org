@@ -54,6 +54,31 @@ Then I open Emacs, go to a scratch buffer, paste and eval this:
       (shell-command "mise bootstrap apply --cd ~/dotfiles --force --yes")
       (delete-directory "~/.emacs.d" t)
       (shell-command "git clone https://github.com/timfel/.emacs.d ~/.emacs.d")
+      ;; Android's sfnt font driver only scans TrueType files in ~/fonts,
+      ;; before it reads the init file.  Keep the managed copies in
+      ;; ~/.emacs.d/fonts and expose that directory through ~/fonts.
+      (require 'url)
+      (let ((font-directory (expand-file-name "~/.emacs.d/fonts/"))
+            (fonts '(("NotoSansMono-Regular.ttf"
+                      . "https://fonts.gstatic.com/s/notosansmono/v37/BngrUXNETWXI6LwhGYvaxZikqZqK6fBq6kPvUce2oAZcdthSBUsYck4-_FNJ49o.ttf")
+                     ("NotoEmoji-Regular.ttf"
+                      . "https://fonts.gstatic.com/s/notoemoji/v64/bMrnmSyK7YY-MEu6aWjPDs-ar6uWaGWuob-r0jwv.ttf")
+                     ("NotoSansSymbols2-Regular.ttf"
+                      . "https://fonts.gstatic.com/s/notosanssymbols2/v25/I_uyMoGduATTei9eI8daxVHDyfisHr71ypM.ttf"))))
+        (make-directory font-directory t)
+        (dolist (font fonts)
+          (let ((destination (expand-file-name (car font) font-directory)))
+            (unless (file-exists-p destination)
+              (let ((temporary (make-temp-file "emacs-font-" nil ".ttf")))
+                (unwind-protect
+                    (progn
+                      (url-copy-file (cdr font) temporary t)
+                      (rename-file temporary destination t))
+                  (when (file-exists-p temporary)
+                    (delete-file temporary)))))))
+        (let ((android-font-directory (expand-file-name "~/fonts")))
+          (unless (file-exists-p android-font-directory)
+            (make-symbolic-link font-directory android-font-directory))))
       (kill-emacs)))
 #+end_src
 

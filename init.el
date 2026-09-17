@@ -78,8 +78,6 @@
        (cond
         ((eq system-type 'windows-nt)
          (apply #'browse-url-default-browser url args))
-        ((eq system-type 'android)
-         (apply #'browse-url-default-android-browser url args))
         (t
          (setq browse-url-generic-program (or (executable-find "wslview") "xdg-open"))
          (apply #'browse-url-generic url args))))))
@@ -154,8 +152,7 @@
 ;; lisp files in my .emacs.d
 (load (locate-user-emacs-file "./init-lisp.el"))
 ;; agent frontend. `agent-shell' uses ACP, `agent-tui' uses term
-(unless (eq system-type 'android)
-  (load (locate-user-emacs-file "./init-agent-shell.el")))
+(load (locate-user-emacs-file "./init-agent-shell.el"))
 ;; (load (locate-user-emacs-file "./init-agent-tui.el")))
 ;; packages that make things prettier, but not really more functional
 (load (locate-user-emacs-file "./init-eyecandy.el"))
@@ -175,47 +172,43 @@
   :config
   (load-theme 'modus-operandi-tinted)
 
-  ;; Use dedicated fallback fonts for Unicode symbols and emoji.  In
-  ;; particular, do not map the emoji pictograph range to Segoe UI Symbol:
-  ;; that font only covers part of the range and can mask better fallbacks.
-  ;; Android normally provides these as Noto fonts, rather than the fonts
-  ;; available on desktop systems.  Its sfnt-android backend cannot render
-  ;; color/OpenType fonts, so do not select Noto Color Emoji there.
-  (setq use-default-font-for-symbols nil)
-  (let ((families (font-family-list)))
-    (when-let* ((emoji-font
-                 (seq-find (lambda (font) (member font families))
-                           '("Apple Color Emoji"
-                             "Noto Color Emoji"
-                             "Noto Emoji"
-                             "Segoe UI Emoji"
-                             "Symbola"))))
-      (set-fontset-font t 'emoji emoji-font nil 'prepend))
-    ;; The two Noto symbol fonts complement each other: Symbols 2 contains
-    ;; the geometric bullets and supplemental arrows, while Symbols contains
-    ;; some of the older miscellaneous symbols used by org-modern.
-    (let ((symbol-fonts
-           (seq-filter (lambda (font) (member font families))
-                       '("Noto Sans Symbols2"
-                         "Noto Sans Symbols 2"
-                         "Noto Sans Symbols"
-                         "Noto Sans Math"
-                         "Segoe UI Symbol"
-                         "Apple Symbols"
-                         "Symbola"))))
-      (when symbol-fonts
-        (set-fontset-font t 'symbol (car symbol-fonts) nil 'prepend)
-        (dolist (font (cdr symbol-fonts))
-          (set-fontset-font t 'symbol font nil 'append)))))
+  ;; Android configures its own fontset below in use-package android
+  (unless (eq system-type 'android)
+    ;; Use dedicated fallback fonts for Unicode symbols and emoji.  In
+    ;; particular, do not map the emoji pictograph range to Segoe UI Symbol:
+    ;; that font only covers part of the range and can mask better fallbacks.
+    (setq use-default-font-for-symbols nil)
+    (let ((families (font-family-list)))
+      (when-let* ((emoji-font
+                   (seq-find (lambda (font) (member font families))
+                             '("Apple Color Emoji"
+                               "Noto Emoji"
+                               "Segoe UI Emoji"
+                               "Symbola"))))
+        (set-fontset-font t 'emoji emoji-font nil 'prepend))
+      ;; The two Noto symbol fonts complement each other: Symbols 2 contains
+      ;; the geometric bullets and supplemental arrows, while Symbols contains
+      ;; some of the older miscellaneous symbols used by org-modern.
+      (let ((symbol-fonts
+             (seq-filter (lambda (font) (member font families))
+                         '("Noto Sans Symbols2"
+                           "Noto Sans Symbols 2"
+                           "Noto Sans Symbols"
+                           "Noto Sans Math"
+                           "Segoe UI Symbol"
+                           "Apple Symbols"
+                           "Symbola"))))
+        (when symbol-fonts
+          (set-fontset-font t 'symbol (car symbol-fonts) nil 'prepend)
+          (dolist (font (cdr symbol-fonts))
+            (set-fontset-font t 'symbol font nil 'append))))))
 
   (defun timfel/set-frame-faces ()
     (cond
      ((memq window-system '(x pgtk))
       (set-face-attribute 'default nil :font "DejaVu Sans Mono-10"))
      ((eq window-system 'w32)
-      (set-face-attribute 'default nil :family "Consolas" :height 105))
-     ((eq system-type 'android)
-      (set-face-attribute 'default nil :family "Droid Sans Mono" :height 120)))
+      (set-face-attribute 'default nil :family "Consolas" :height 105)))
     (set-face-background 'fringe (face-attribute 'default :background))
     (let ((w (* 2 (string-pixel-width "m"))))
       (customize-set-variable 'fringe-mode (cons w w))))

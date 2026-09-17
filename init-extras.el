@@ -7,7 +7,6 @@
   :pin melpa)
 
 (use-package wsl-interop
-  :unless (eq system-type 'android)
   :vc (:url "https://github.com/timfel/wsl-interop.el" :branch "main" :rev :newest)
   :commands (wsl-p
              wsl-powershell-command wsl-powershell-command-to-string
@@ -88,7 +87,6 @@
 (use-package docker-compose-mode
   :ensure t
   :disabled
-  :unless (eq system-type 'android)
   :commands (docker-compose-mode))
 
 (use-package web-mode
@@ -615,7 +613,7 @@
 
 (use-package mise
   :ensure t
-  :unless (eq system-type 'android)
+  :if (executable-find "mise")
   :hook
   (after-init . global-mise-mode)
   :custom

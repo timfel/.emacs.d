@@ -68,9 +68,7 @@
   (emojify-emoji-styles '(unicode)))
 
 (use-package emacs-theme-detection
-  :ensure t
-  :defer t
-  :unless (eq system-type 'android)
+  :disabled
   :functions (emacs-theme-detection-is-dark emacs-theme-detection-is-light)
   :init
   (autoload #'emacs-theme-detection-is-dark "emacs-theme-detection")
@@ -97,12 +95,12 @@
   (org-modern-replace-stars "▶▷▹●◉○◌◆◈◇✳⋅")
   :hook
   (org-mode . (lambda ()
-                (unless (eq system-type 'android)
+                (unless line-spacing
                   (setq line-spacing '(0.1 . 0.1))
                   (setq-local left-margin-width 8)
                   (setq-local right-margin-width 12))))
   (org-agenda-mode . (lambda ()
-                       (unless (eq system-type 'android)
+                       (unless line-spacing
                          (setq line-spacing '(0.1 . 0.1)))))
   :config
   (seq-do
@@ -137,9 +135,9 @@
   (dslide-slide-in-effect nil)
   :config
   (customize-set-variable 'dslide-default-actions (seq-remove (lambda (e) (eq e 'dslide-action-babel)) dslide-default-actions))
-  (when (eq system-type 'android) ;; touchscreen events come hard and fast
-    (timeout-throttle #'dslide-deck-forward 2)
-    (timeout-throttle #'dslide-deck-backward 2))
+  ;; do not accidentally skip a slide
+  (timeout-throttle #'dslide-deck-forward 1)
+  (timeout-throttle #'dslide-deck-backward 1)
   :hook
   (dslide-develop
    . (lambda ()
