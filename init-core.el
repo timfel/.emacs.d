@@ -85,6 +85,27 @@
   (customize-set-variable 'auto-save-default nil)
   (customize-set-variable 'auto-save-visited-mode nil)
   (customize-set-variable 'make-backup-files nil)
+  (customize-set-variable 'recentf-auto-cleanup 300)
+
+  ;; Set Coding System to plain utf-8
+  (if (fboundp 'set-charset-priority)
+      (set-charset-priority 'unicode))
+  (prefer-coding-system 'utf-8)
+  (setopt locale-coding-system 'utf-8)
+
+  ;; Create symbolic link for fonts directory from emacs dotfiles
+  ;; directory.  If ~/fonts exists and fonts from user emacs directory
+  ;; doesn't exist then do nothing.
+  (when-let* ((target (expand-file-name "~/fonts"))
+              (link (expand-file-name "fonts" user-emacs-directory))
+              ((not (file-exists-p target)))
+              ((file-exists-p link))
+              ((yes-or-no-p "Do you want to create `fonts' folder?")))
+    (make-symbolic-link link target)
+    (message "Symbolic link created: %s -> %s" link target))
+
+  ;; never make me type "yes"
+  (customize-set-variable 'use-short-answers t)
 
   ;; Make text easier to read on a phone.
   (require 'visual-wrap)

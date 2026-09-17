@@ -83,6 +83,7 @@
         (t
          (setq browse-url-generic-program (or (executable-find "wslview") "xdg-open"))
          (apply #'browse-url-generic url args))))))
+  (save-interprogram-paste-before-kill t)
   (user-full-name "Tim Felgentreff")
   (user-mail-address "timfelgentreff@gmail.com")
   (send-mail-function 'mailclient-send-it)
