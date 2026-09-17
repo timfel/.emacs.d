@@ -90,7 +90,7 @@
   :after org
   :demand t
   :custom
-  (org-modern-hide-stars "")
+  (org-modern-hide-stars 'leading)
   (org-modern-star 'replace)
   (org-modern-replace-stars "▶▷▹●◉○◌◆◈◇✳⋅")
   :hook
