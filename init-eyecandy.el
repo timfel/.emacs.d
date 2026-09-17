@@ -112,10 +112,6 @@
    (number-sequence 1 8))
   (global-org-modern-mode 1))
 
-(use-package timeout
-  :ensure t
-  :vc (:url "https://github.com/karthink/timeout.git" :branch "master" :rev :newest))
-
 (use-package dslide
   :after org-modern
   :commands (dslide-deck-start dslide-deck-present)
@@ -141,7 +137,7 @@
   (dslide-slide-in-effect nil)
   :config
   (customize-set-variable 'dslide-default-actions (seq-remove (lambda (e) (eq e 'dslide-action-babel)) dslide-default-actions))
-  (when (eq system-type 'android)
+  (when (eq system-type 'android) ;; touchscreen events come hard and fast
     (timeout-throttle #'dslide-deck-forward 2)
     (timeout-throttle #'dslide-deck-backward 2))
   :hook
