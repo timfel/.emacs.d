@@ -112,6 +112,10 @@
    (number-sequence 1 8))
   (global-org-modern-mode 1))
 
+(use-package timeout
+  :ensure t
+  :vc (:url "https://github.com/karthink/timeout.git" :branch "master" :rev :newest))
+
 (use-package dslide
   :after org-modern
   :commands (dslide-deck-start dslide-deck-present)
@@ -126,17 +130,20 @@
          ("<volume-up>" . dslide-deck-start)
          ("<volume-down>" . dslide-deck-stop)
          ([touchscreen-scroll] . (lambda (event)
-                                   (interactive "e")
-                                   (let ((dx (nth 2 event)))
-                                     (if (> dx 0)
-                                         (dslide-deck-forward)
-                                       (dslide-deck-backward))))))
+                                    (interactive "e")
+                                    (let ((dx (nth 2 event)))
+                                      (if (> dx 0)
+                                          (dslide-deck-forward)
+                                        (dslide-deck-backward))))))
   :custom
   (dslide-breadcrumb-separator " ▻ ")
   (dslide-present-frame-parameters '((fullscreen . fullboth)))
   (dslide-slide-in-effect nil)
   :config
   (customize-set-variable 'dslide-default-actions (seq-remove (lambda (e) (eq e 'dslide-action-babel)) dslide-default-actions))
+  (when (eq system-type 'android)
+    (timeout-throttle #'dslide-deck-forward 2)
+    (timeout-throttle #'dslide-deck-backward 2))
   :hook
   (dslide-develop
    . (lambda ()
