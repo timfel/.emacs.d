@@ -95,8 +95,6 @@
   (org-modern-hide-stars "")
   (org-modern-star 'replace)
   (org-modern-replace-stars "▶▷▹●◉○◌◆◈◇✳⋅")
-  :bind (:map org-mode-map
-         ("<f5>" . dslide-deck-present))
   :hook
   (org-mode . (lambda ()
                 (unless (eq system-type 'android)
@@ -118,9 +116,21 @@
   :after org-modern
   :commands (dslide-deck-start dslide-deck-present)
   :ensure t
+  :defines (my-dslide-slide-width my-dslide-slide-height)
   :init
   (setq my-dslide-slide-width 80)
   (setq my-dslide-slide-height 30)
+  :bind (:map org-mode-map
+         ("<f5>" . dslide-deck-present)
+         :map dslide-mode-map
+         ("<volume-up>" . dslide-deck-start)
+         ("<volume-down>" . dslide-deck-stop)
+         ([touchscreen-scroll] . (lambda (event)
+                                   (interactive "e")
+                                   (let ((dx (nth 2 event)))
+                                     (if (> dx 0)
+                                         (dslide-deck-forward)
+                                       (dslide-deck-backward))))))
   :custom
   (dslide-breadcrumb-separator " ▻ ")
   (dslide-present-frame-parameters '((fullscreen . fullboth)))
