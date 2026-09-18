@@ -11,6 +11,5 @@
                (cons '(java-mode java-ts-mode) #'eglot-jdtls)))
 
 (use-package eglot-jdb
-  :after eglot
-  :demand t
+  :after eglot-jdtls
   :commands (eglot-jdb))

@@ -158,6 +158,7 @@
 (use-package agent-shell-tramp
   :vc (:url "https://github.com/junyi-hou/agent-shell-tramp" :branch "main" :rev :newest)
   :after agent-shell
+  :demand t
   :config
   (agent-shell-tramp-mode 1))
 

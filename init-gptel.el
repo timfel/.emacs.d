@@ -98,13 +98,16 @@
   :after gptel)
 
 (use-package gptel-pi
+  :after gptel
   :demand t
   :commands (gptel-pi))
 
 (use-package gptel-fim
+  :after gptel
   :commands (gptel-fim))
 
 (use-package gptel-compile
+  :after gptel
   :commands (gptel-compile))
 
 (use-package gptel-modeline-status
