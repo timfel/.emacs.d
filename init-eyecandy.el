@@ -92,7 +92,12 @@
   :custom
   (org-modern-hide-stars 'leading)
   (org-modern-star 'replace)
-  (org-modern-replace-stars "▶▷▹●◉○◌◆◈◇✳⋅")
+  (org-modern-replace-stars "●◉◍○◌∙◦⠂⠐")
+  ;; "●⚉◉○◌⚬◦·"
+  ;; "●◉○⚇⚆◌⚬"
+  ;; "❱▶▷►▻▸▹"
+  ;; "█▐▓▒░▕❘"
+  ;; "●◉○◌◦∙·-"
   :hook
   (org-mode . (lambda ()
                 (unless line-spacing

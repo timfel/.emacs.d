@@ -5,12 +5,13 @@
   :if (eq system-type 'android)
   :no-require t
   :defines (timfel/cloud-storage android-intercept-control-space touch-screen-display-keyboard
-            touch-screen-current-tool org-capture-mode-map visual-wrap-extra-indent)
+            touch-screen-current-tool org-capture-mode-map visual-wrap-extra-indent org-agenda-files
+            org-capture-mode org-agenda-mode org-mode)
   :functions (org-capture-kill org-capture-finalize org-capture with-auto-default
               timfel/android-mail-addresses timfel/android-send-it
               timfel/android-start-termux timfel/android-set-window-margins
-              timfel/android-touch-screen-point-up
-              global-visual-wrap-prefix-mode
+              timfel/android-touch-screen-point-up org-agenda-switch-to
+              global-visual-wrap-prefix-mode org-agenda-redo-all
               org-fold-show-all
               touch-screen-handle-point-up context-menu-open
               mail-fetch-field mail-strip-quoted-names
@@ -20,7 +21,7 @@
   (after-init . (lambda ()
                   (run-with-idle-timer
                    1 nil
-                   (lambda () (global-text-scale-adjust +16)))))
+                   (lambda () (global-text-scale-adjust +8)))))
   :custom
   (browse-url-browser-function #'browse-url-default-android-browser)
   :config
@@ -29,26 +30,27 @@
   (menu-bar-mode 1)
   (modifier-bar-mode -1) ;; and extra bar with Meta/Ctrl/Super buttons if the android kbd doesn't have them
   (customize-set-variable 'tool-bar-position 'bottom)
-  (customize-set-variable 'tool-bar-always-show-default t)
+  (customize-set-variable 'tool-bar-always-show-default nil)
   (customize-set-variable 'tool-bar-button-margin 48)
   (customize-set-variable 'touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
-  (run-with-idle-timer
-   1 nil
-   (lambda () (set-face-attribute 'menu nil :height 0.8)))
-  (setq tool-bar-map '(keymap))
+  (setq-default tool-bar-map (make-sparse-keymap))
+  (setq tool-bar-map (default-value 'tool-bar-map))
   (tool-bar-add-item "save" 'save-buffer 'save-buffer)
-  (tool-bar-add-item "close" ;; remove window splits if any, otherwise bury buffer and go back to notes
+  ;; try to dwim ...
+  (tool-bar-add-item "close"
                      (lambda ()
                        (interactive)
                        (if (> (seq-length (window-list)) 1)
-                           (progn
-                             (call-interactively #'other-window)
-                             (delete-other-windows))
-                         (bury-buffer)
-                         (find-file (expand-file-name "SyncFolder/notes.org" timfel/cloud-storage))
-                         (revert-buffer)
-                         (org-fold-show-all)
-                         (goto-char (point-max))))
+                           (quit-window)
+                         (quit-window)
+                         (unless (derived-mode-p '(org-agenda-mode org-mode))
+                           (dolist (f org-agenda-files)
+                             (when-let* ((b (find-buffer-visiting f))
+                                         (_ (not (buffer-modified-p b))))
+                               (kill-buffer b)))
+                           (find-file (car (last org-agenda-files)))
+                           (org-fold-show-all)
+                           (goto-char (point-max)))))
                      'close)
   (define-key-after tool-bar-map [separator-0] menu-bar-separator)
   (tool-bar-add-item "undo" 'undo 'undo)
@@ -59,28 +61,93 @@
                        (let ((last-input-event nil))
                          (context-menu-open)))
                      'context-menu-open)
-  (define-key-after tool-bar-map [separator-1] menu-bar-separator)
-  (require 'org-capture)
-  (tool-bar-add-item "mail/spam"
-                     (lambda () (interactive)
-                       (delete-other-windows)
-                       (org-agenda nil "a"))
-                     'agenda)
-  (tool-bar-add-item "mail/inbox"
-                     (lambda () (interactive)
-                       (delete-other-windows)
-                       (org-capture nil "t"))
-                     'todo)
-  (tool-bar-add-item "mail/compose"
-                     (lambda () (interactive)
-                       (delete-other-windows)
-                       (org-capture nil "n"))
-                     'note)
-  (tool-bar-add-item "mail/reply-all"
-                     (lambda () (interactive)
-                       (delete-other-windows)
-                       (org-capture nil "m"))
-                     'meeting)
+
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (unless org-capture-mode
+                (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
+                (define-key-after tool-bar-map [separator-0] menu-bar-separator)
+                (require 'org-agenda)
+                (require 'org-capture)
+                (tool-bar-local-item "mail/spam"
+                                     (lambda () (interactive)
+                                       (org-agenda nil "a")
+                                       (delete-other-windows))
+                                     'agenda
+                                     tool-bar-map)
+                (tool-bar-local-item "mail/inbox"
+                                     (lambda () (interactive)
+                                       (org-capture nil "t")
+                                       (delete-other-windows))
+                                     'todo
+                                     tool-bar-map)
+                (tool-bar-local-item "mail/compose"
+                                     (lambda () (interactive)
+                                       (org-capture nil "n")
+                                       (delete-other-windows))
+                                     'note
+                                     tool-bar-map)
+                (tool-bar-local-item "mail/reply-all"
+                                     (lambda () (interactive)
+                                       (org-capture nil "m")
+                                       (delete-other-windows))
+                                     'meeting
+                                     tool-bar-map)
+                (tool-bar-local-item "conceal" 'org-global-cycle 'cycle
+                                     tool-bar-map)
+                (tool-bar-local-item "symbols/chevron_up_16" 'org-previous-visible-heading
+                                     'previous tool-bar-map)
+                (tool-bar-local-item "symbols/chevron_down_16" 'org-previous-next-heading
+                                     'next tool-bar-map))))
+
+  (add-hook 'org-capture-mode-hook
+            (lambda ()
+              (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
+              (define-key-after tool-bar-map [separator-0] menu-bar-separator)
+              (tool-bar-local-item "symbols/check-mark_16"
+                                   'org-capture-finalize
+                                   'org-capture-finalize
+                                   tool-bar-map)
+              (tool-bar-local-item "symbols/cross_16"
+                     'org-capture-kill
+                     'org-capture-kill
+                     tool-bar-map)))
+
+  (add-hook 'org-agenda-mode
+            (lambda ()
+              (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
+              (tool-bar-local-item "mail/inbox"
+                                   (lambda () (interactive)
+                                     (org-capture nil "t")
+                                     (delete-other-windows))
+                                   'todo
+                                   tool-bar-map)
+              (tool-bar-local-item "mail/compose"
+                                   (lambda () (interactive)
+                                     (org-capture nil "n")
+                                     (delete-other-windows))
+                                   'note
+                                   tool-bar-map)
+              (tool-bar-local-item "mail/reply-all"
+                                   (lambda () (interactive)
+                                     (org-capture nil "m")
+                                     (delete-other-windows))
+                                   'meeting
+                                   tool-bar-map)
+              (tool-bar-local-item "refresh"
+                                   (lambda () (interactive)
+                                     (dolist (f org-agenda-files)
+                                       (when-let* ((b (find-buffer-visiting f))
+                                                   (_ (not (buffer-modified-p b))))
+                                         (kill-buffer b)))
+                                     (org-agenda-redo-all))
+                                   'refresh
+                                   tool-bar-map)
+              (tool-bar-local-item "right-arrow"
+                                   (lambda () (interactive)
+                                     (org-agenda-switch-to t))
+                                   'goto
+                                   tool-bar-map)))
 
   ;; No auto-save and no backup files
   (customize-set-variable 'auto-save-default nil)
@@ -280,6 +347,7 @@
   (org-hide-emphasis-markers t)
   (org-pretty-entities t)
   (org-ellipsis "…")
+
   (org-link-elisp-skip-confirm-regexp
    (concat
     "^(jira-detail-show-issue \"[^\"]+\")$"
