@@ -92,7 +92,8 @@
   :custom
   (org-modern-hide-stars 'leading)
   (org-modern-star 'replace)
-  (org-modern-replace-stars "●◉◍○◌∙◦⠂⠐")
+  (org-modern-replace-stars "●◉○◌◦⠂⠐") ;; best compromise across the platforms i use
+  ;; "●◉◍○◌∙◦⠂⠐" ;; works best with DejaVu Sans Mono, but not Android or SourceCodePro
   ;; "●⚉◉○◌⚬◦·"
   ;; "●◉○⚇⚆◌⚬"
   ;; "❱▶▷►▻▸▹"

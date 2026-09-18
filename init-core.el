@@ -103,7 +103,7 @@
                                      tool-bar-map)
                 (tool-bar-local-item "symbols/chevron_up_16" 'org-previous-visible-heading
                                      'previous tool-bar-map)
-                (tool-bar-local-item "symbols/chevron_down_16" 'org-previous-next-heading
+                (tool-bar-local-item "symbols/chevron_down_16" 'org-previous-visible-heading
                                      'next tool-bar-map))))
 
   (add-hook 'org-capture-mode-hook
@@ -119,7 +119,7 @@
                      'org-capture-kill
                      tool-bar-map)))
 
-  (add-hook 'org-agenda-mode
+  (add-hook 'org-agenda-finalize-hook
             (lambda ()
               (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
               (tool-bar-local-item "mail/inbox"
