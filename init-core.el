@@ -44,7 +44,10 @@
                      (lambda ()
                        (interactive)
                        (if (> (seq-length (window-list)) 1)
-                           (quit-window)
+                           (progn
+                             (quit-window)
+                             (other-window 1)
+                             (delete-other-windows))
                          (quit-window)
                          (unless (derived-mode-p '(org-agenda-mode org-mode))
                            (dolist (f org-agenda-files)
