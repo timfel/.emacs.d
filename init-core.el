@@ -103,7 +103,7 @@
                                      tool-bar-map)
                 (tool-bar-local-item "symbols/chevron_up_16" 'org-previous-visible-heading
                                      'previous tool-bar-map)
-                (tool-bar-local-item "symbols/chevron_down_16" 'org-previous-visible-heading
+                (tool-bar-local-item "symbols/chevron_down_16" 'org-next-visible-heading
                                      'next tool-bar-map))))
 
   (add-hook 'org-capture-mode-hook
