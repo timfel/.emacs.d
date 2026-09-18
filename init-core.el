@@ -25,6 +25,9 @@
   :custom
   (browse-url-browser-function #'browse-url-default-android-browser)
   :config
+  (require 'org-agenda)
+  (require 'org-capture)
+
   ;; Tap targets for finger use
   (tool-bar-mode 1)
   (menu-bar-mode 1)
