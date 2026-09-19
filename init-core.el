@@ -121,7 +121,9 @@
 
   (add-hook 'org-agenda-finalize-hook
             (lambda ()
-              (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
+              (setq-local tool-bar-map (make-sparse-keymap))
+              (tool-bar-local-item "save" 'org-save-all-org-buffers 'save tool-bar-map)
+              (tool-bar-local-item "close" 'quit-window 'close tool-bar-map)
               (tool-bar-local-item "mail/inbox"
                                    (lambda () (interactive)
                                      (org-capture nil "t")
