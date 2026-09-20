@@ -226,6 +226,14 @@
   (global-hide-mode-line-mode 1)
   (customize-set-variable 'visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
 
+  ;; Make agenda easier to read on phone
+  (setq org-agenda-prefix-format
+        '((agenda . " %i %?-12t% s\n    ")
+          (todo   . " %i")
+          (tags   . " %i")
+          (search . " %i")))
+  (setq org-deadline-warning-days 0)
+  
   ;; Keyboard setup for the the no-name bluetooth phone keyboard I use. AltGr
   ;; sends KEYCODE_*, and there is no Meta key, so let's make it usable
   (define-key key-translation-map (kbd "<KEYCODE_SPACE>") (kbd "ESC"))
