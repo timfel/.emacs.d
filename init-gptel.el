@@ -32,6 +32,19 @@
   (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@user\n")
   (setf (alist-get 'org-mode gptel-response-prefix-alist) "@llm\n")
 
+  (add-hook 'gptel-mode-hook
+            (lambda ()
+              (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
+              (define-key-after tool-bar-map [separator-0] menu-bar-separator)
+              (tool-bar-local-item "symbols/check-mark_16"
+                                   'gptel-send
+                                   'send
+                                   tool-bar-map)
+              (tool-bar-local-item "conceal"
+                                   'org-fold-hide-block-all
+                                   'hide
+                                   tool-bar-map)))
+
   (defun gptel-buffers ()
     (interactive)
     (ibuffer

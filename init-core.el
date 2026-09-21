@@ -70,7 +70,7 @@
 
   (add-hook 'org-mode-hook
             (lambda ()
-              (unless org-capture-mode
+              (unless (or org-capture-mode gptel-mode)
                 (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
                 (define-key-after tool-bar-map [separator-0] menu-bar-separator)
                 (require 'org-agenda)
