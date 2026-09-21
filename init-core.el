@@ -99,12 +99,19 @@
                                        (delete-other-windows))
                                      'meeting
                                      tool-bar-map)
-                (tool-bar-local-item "conceal" 'org-global-cycle 'cycle
+                (tool-bar-local-item "conceal" 'org-cycle 'cycle
                                      tool-bar-map)
                 (tool-bar-local-item "symbols/chevron_up_16" 'org-previous-visible-heading
                                      'previous tool-bar-map)
                 (tool-bar-local-item "symbols/chevron_down_16" 'org-next-visible-heading
                                      'next tool-bar-map))))
+
+  (add-hook 'org-cycle-hook
+            (lambda (new-state)
+              (if (eq new-state 'folded)
+                  (save-excursion
+                    (or (org-at-heading-p) (org-back-to-heading nil))
+                    (org-fold-hide-sublevels (org-outline-level))))))
 
   (add-hook 'org-capture-mode-hook
             (lambda ()
