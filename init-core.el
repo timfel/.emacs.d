@@ -99,7 +99,7 @@
                                        (delete-other-windows))
                                      'meeting
                                      tool-bar-map)
-                (tool-bar-local-item "conceal" 'org-cycle-depth 'cycle
+                (tool-bar-local-item "conceal" 'org-global-cycle 'cycle
                                      tool-bar-map)
                 (tool-bar-local-item "symbols/chevron_up_16" 'org-previous-visible-heading
                                      'previous tool-bar-map)
@@ -297,13 +297,10 @@
                                       try-complete-file-name
                                       try-expand-dabbrev)))
 
-(defvar-local org-cycle-depth--level 0
-  "Current level in `org-cycle-depth'.")
-
 (use-package org
   :after timfel
   :commands org-mode
-  :functions (org-agenda-files org-global-cycle org-fold-show-all)
+  :functions org-agenda-files
   :mode (("\\.org$" . org-mode))
   :custom-face
   (org-level-1 ((t (:inherit outline-1 :height 1.35))))
@@ -351,20 +348,6 @@
          ("C-c <left>" . org-shiftleft)
          ("C-c M-RET" . org-insert-subheading))
   :config
-  (defun org-cycle-depth ()
-    "Cycle global Org visibility through levels 1 through 6 and all.
-The next invocation after showing everything starts again at level 1."
-    (interactive)
-    (unless (derived-mode-p 'org-mode)
-      (user-error "Not in an Org buffer"))
-    (setq org-cycle-depth--level
-          (if (>= org-cycle-depth--level 7)
-              1
-            (1+ org-cycle-depth--level)))
-    (if (<= org-cycle-depth--level 6)
-        (org-global-cycle org-cycle-depth--level)
-      (org-fold-show-all)))
-
   (defun timfel/org-buffers (&rest _)
     (ibuffer t "*Org Buffers*" '((used-mode . org-mode))))
   :custom
