@@ -53,7 +53,7 @@
                            (dolist (f org-agenda-files)
                              (when-let* ((b (find-buffer-visiting f))
                                          (_ (not (buffer-modified-p b))))
-                               (kill-buffer b)))
+                               (revert-buffer b)))
                            (find-file (car (last org-agenda-files)))
                            (org-fold-show-all)
                            (goto-char (point-max)))))
@@ -154,7 +154,7 @@
                                      (dolist (f org-agenda-files)
                                        (when-let* ((b (find-buffer-visiting f))
                                                    (_ (not (buffer-modified-p b))))
-                                         (kill-buffer b)))
+                                         (revert-buffer b)))
                                      (org-agenda-redo-all))
                                    'refresh
                                    tool-bar-map)
