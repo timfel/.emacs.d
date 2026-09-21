@@ -62,25 +62,6 @@
          ("C-M-]" . backward-list)
          ("C-z" . (lambda () (interactive) (beep))))
   :custom
-  (browse-url-browser-function
-   (lambda (url &rest args)
-     (if (and (not (string-match-p
-                    (rx (or "mailto:"
-                            "github.com"
-                            "jira"
-                            "bitbucket"
-                            ".google.com"
-                            ".office.com"
-                            ".slack.com"))
-                    url))
-              (y-or-n-p "Browse with EWW? "))
-         (apply #'eww-browse-url url args)
-       (cond
-        ((eq system-type 'windows-nt)
-         (apply #'browse-url-default-browser url args))
-        (t
-         (setq browse-url-generic-program (or (executable-find "wslview") "xdg-open"))
-         (apply #'browse-url-generic url args))))))
   (save-interprogram-paste-before-kill t)
   (user-full-name "Tim Felgentreff")
   (user-mail-address "timfelgentreff@gmail.com")
@@ -122,6 +103,15 @@
   (treesit-auto-install-grammar (and (not (equal system-type 'windows-nt)) 'always))
   (treesit-enabled-modes (not (equal system-type 'windows-nt)))
   :config
+  (cond
+   ((eq system-type 'windows-nt)
+    (setq browse-url-browser-function #'browse-url-default-browser))
+   ((executable-find "wslview")
+    (setq browse-url-generic-program "wslview")
+    (setq browse-url-browser-function #'browse-url-generic))
+   ((executable-find "firefox")
+    (setq browse-url-browser-function #'browse-url-firefox)))
+
   (if (file-exists-p custom-file)
       (load custom-file))
   (add-to-list 'save-some-buffers-action-alist
