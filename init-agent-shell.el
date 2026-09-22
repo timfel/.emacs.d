@@ -91,6 +91,7 @@
   :commands agent-shell
   :pin melpa
   :bind (("C-x a s" . agent-shell)
+         ("C-x a b" . (lambda () (interactive) (ibuffer t "*agent buffers*" '((used-mode . agent-shell-mode)))))
          :map agent-shell-mode-map
          ("C-c RET" . shell-maker-submit)
          ("C-x a R" . agent-shell-restart)

@@ -930,6 +930,7 @@
   (eglot-documentation-renderer 'markdown-ts-view-mode)
   (eglot-code-action-indications nil)
   (eglot-extend-to-xref t)
+  (eglot-send-changes-idle-time 2)
   :config
   (add-to-list 'eglot-server-programs
                '((ruby-mode ruby-ts-mode) "ruby-lsp"))

@@ -345,69 +345,36 @@
   :defer t
   :bind (("C-S-d" . mc/mark-more-like-this-extended)))
 
-
-(defun timfel/side-shell-toggle (&optional arg)
-  (interactive "P")
-  (require 'ghostel)
-  (defvar ghostel-buffer-name)
-  (cl-flet ((hide ()
-              (let ((parent (window-parent)))
-                (if parent
-                    (delete-window)
-                  (set-window-dedicated-p (selected-window) nil)
-                  (pop-to-buffer-same-window nil)))))
-    (if (and (not arg)
-             (derived-mode-p '(ghostel-mode)))
-        ;; if we are inside a shell, hide it
-        (hide)
-      ;; find our prefix, a new name if we need it later, and get the side window
-      (let* ((prefix "*side-term")
-             (side-buffer-name (generate-new-buffer-name (format "%s*" prefix)))
-             (w (or (get-window-with-predicate (lambda (w) (string-prefix-p prefix (buffer-name (window-buffer w)))))
-                    (split-window (selected-window) -18))))
-        ;; activate the side window
-        (select-window w)
-        (set-window-dedicated-p w nil)
-        ;; get or create a new shell buffer
-        (let ((buf
-               (or
-                (when (not arg)
-                  (seq-find (lambda (b) (string-prefix-p prefix (or (buffer-name b) ""))) (buffer-list)))
-                (let ((ghostel-buffer-name side-buffer-name))
-                  (ghostel (not (null arg)))))))
-          ;; put it in the side window, make that window now dedicated to that buffer
-          (pop-to-buffer-same-window buf)
-          (add-hook 'kill-buffer-hook (lambda () (hide)) 0 t)
-          (set-window-dedicated-p w t))))))
-
-(defun timfel/side-shell-select ()
-  (interactive)
-  (let* ((keys (this-command-keys-vector))
-         (last-key (aref keys (1- (length keys))))
-         (sorter (if (eq last-key 'left) #'string-greaterp #'string-lessp))
-         (blfiltered (seq-filter (lambda (b) (string-prefix-p "*side-term" (or (buffer-name b) ""))) (buffer-list)))
-         (bl (seq-sort (lambda (a b) (funcall sorter (buffer-name a) (buffer-name b))) blfiltered))
-         (before (seq-take-while (lambda (b) (not (eq b (current-buffer)))) bl))
-         (after (seq-difference (seq-difference bl before) (list (current-buffer)))))
-    (when (or before after)
-      (set-window-dedicated-p (selected-window) nil)
-      (set-window-buffer (selected-window) (or (seq-first after) (seq-first before)))
-      (set-window-dedicated-p (selected-window) t))))
-
 (use-package ghostel
   :ensure t
-  :defines (ghostel-mode-map ghostel-semi-char-mode-map ghostel-char-mode-map)
+  :defines (ghostel-mode-map ghostel-semi-char-mode-map ghostel-char-mode-map project-prefix-map)
   :commands (ghostel)
-  :bind (("<f12>" . #'timfel/side-shell-toggle)
+  :bind (("<f12>" . (lambda (&optional arg)
+                      (interactive "P")
+                      (pop-to-buffer
+                       (or
+                        (and (null arg)
+                             (seq-find (lambda (b) (with-current-buffer b (derived-mode-p 'ghostel-mode))) (buffer-list)))
+                        (ghostel arg)))))
          :map ghostel-mode-map
-         ("C-c C-<left>" . #'timfel/side-shell-select)
-         ("C-c C-<right>" . #'timfel/side-shell-select)
-         ("<f12>" . #'timfel/side-shell-toggle)
+         ("C-c C-<left>" . #'ghostel-previous)
+         ("C-c C-<right>" . #'ghostel-next)
+         ("<f12>" . #'quit-window)
+         :map project-prefix-map
+         ("s" . #'ghostel-project)
          :map ghostel-semi-char-mode-map
-         ("<f12>" . #'timfel/side-shell-toggle)
+         ("<f12>" . #'delete-window)
          :map ghostel-char-mode-map
-         ("<f12>" . #'timfel/side-shell-toggle))
+         ("<f12>" . #'delete-window))
   :config
+  (setopt display-buffer-alist
+          (cons '("\\*.*ghostel\\*.*"
+                  display-buffer-in-side-window
+                  (reusable-frames . visible)
+                  (window-height . 0.4)
+                  (slot . 1) ;; prefer a slot on the right
+                  (side . bottom))
+                display-buffer-alist))
   (when (and (eq system-type 'windows-nt)
              (eq (type-of ghostel-shell) 'string)
              (string-suffix-p "cmdproxy.exe" ghostel-shell))
