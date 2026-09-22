@@ -53,7 +53,8 @@
                            (dolist (f org-agenda-files)
                              (when-let* ((b (find-buffer-visiting f))
                                          (_ (not (buffer-modified-p b))))
-                               (revert-buffer b)))
+                               (with-current-buffer b 
+                                 (revert-buffer))))
                            (find-file (car (last org-agenda-files)))
                            (org-fold-show-all)
                            (goto-char (point-max)))))
@@ -70,7 +71,7 @@
 
   (add-hook 'org-mode-hook
             (lambda ()
-              (unless (or org-capture-mode gptel-mode)
+              (unless (or org-capture-mode (and (boundp 'gptel) gptel-mode))
                 (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
                 (define-key-after tool-bar-map [separator-0] menu-bar-separator)
                 (require 'org-agenda)
@@ -154,7 +155,8 @@
                                      (dolist (f org-agenda-files)
                                        (when-let* ((b (find-buffer-visiting f))
                                                    (_ (not (buffer-modified-p b))))
-                                         (revert-buffer b)))
+                                         (with-current-buffer b
+                                           (revert-buffer))))
                                      (org-agenda-redo-all))
                                    'refresh
                                    tool-bar-map)
