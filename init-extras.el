@@ -578,6 +578,10 @@
   :ensure t
   :commands (codespaces-setup))
 
+(use-package remoto
+  :ensure t
+  :commands (remoto-browse))
+
 (use-package mise
   :ensure t
   :hook
