@@ -356,6 +356,7 @@
   :config
   (defun timfel/org-buffers (&rest _)
     (ibuffer t "*Org Buffers*" '((used-mode . org-mode))))
+  (setf (alist-get 'agenda org-fold-show-context-detail) 'canonical)
   :custom
   (org-refile-use-outline-path 'file)
   (org-archive-mark-done t)
@@ -369,7 +370,6 @@
   (org-hide-emphasis-markers t)
   (org-pretty-entities t)
   (org-ellipsis "…")
-
   (org-link-elisp-skip-confirm-regexp
    (concat
     "^(jira-detail-show-issue \"[^\"]+\")$"
