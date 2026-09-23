@@ -580,9 +580,12 @@
 
 (use-package mise
   :ensure t
-  :if (executable-find "mise")
   :hook
-  (after-init . global-mise-mode)
+  (after-init . (lambda () (run-with-idle-timer
+                 2 nil
+                 (lambda ()
+                   (when (executable-find "mise")
+                     (global-mise-mode))))))
   :custom
   (mise-update-on-eshell-directory-change t))
 
