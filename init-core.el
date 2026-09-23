@@ -6,7 +6,8 @@
   :no-require t
   :defines (timfel/cloud-storage android-intercept-control-space touch-screen-display-keyboard
             touch-screen-current-tool org-capture-mode-map visual-wrap-extra-indent org-agenda-files
-            org-capture-mode org-agenda-mode org-mode)
+            org-capture-mode org-agenda-mode org-mode org-agenda-prefix-format
+            org-deadline-warning-days)
   :functions (org-capture-kill org-capture-finalize org-capture with-auto-default
               timfel/android-mail-addresses timfel/android-send-it
               timfel/android-start-termux timfel/android-set-window-margins
@@ -71,7 +72,7 @@
 
   (add-hook 'org-mode-hook
             (lambda ()
-              (unless (or org-capture-mode (and (boundp 'gptel) gptel-mode))
+              (unless (or org-capture-mode (and (boundp 'gptel-mode) gptel-mode))
                 (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
                 (define-key-after tool-bar-map [separator-0] menu-bar-separator)
                 (require 'org-agenda)
@@ -236,12 +237,12 @@
   (customize-set-variable 'visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
 
   ;; Make agenda easier to read on phone
-  (setq org-agenda-prefix-format
+  (customize-set-variable 'org-agenda-prefix-format
         '((agenda . " %i %?-12t% s\n    ")
           (todo   . " %i")
           (tags   . " %i")
           (search . " %i")))
-  (setq org-deadline-warning-days 0)
+  (customize-set-variable 'org-deadline-warning-days 0)
   
   ;; Keyboard setup for the the no-name bluetooth phone keyboard I use. AltGr
   ;; sends KEYCODE_*, and there is no Meta key, so let's make it usable

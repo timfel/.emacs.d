@@ -85,6 +85,16 @@
   :config
   (setq zone-programs (vconcat [zone-rainbow] zone-programs)))
 
+(use-package org-alert
+  :ensure t
+  :after org
+  :unless (eq system-type 'android)
+  :custom
+  (org-alert-interval 300)
+  (org-alert-notify-cutoff 10)
+  :config
+  (org-alert-enable))
+
 (use-package org-modern
   :ensure t
   :after org
@@ -115,6 +125,9 @@
                          nil :height (/ (- 28 i) 20.0)))
    (number-sequence 1 8))
   (global-org-modern-mode 1))
+
+;; for the horizontal guideline that my slide might be getting big
+(defvar-local timfel/dslide-develop--horizontal-lines nil)
 
 (use-package dslide
   :after org-modern
@@ -152,7 +165,6 @@
        (display-fill-column-indicator-mode 1)
        (let ((horizontal-line
               (lambda ()
-                (defvar-local timfel/dslide-develop--horizontal-lines nil)
                 (mapc #'delete-overlay timfel/dslide-develop--horizontal-lines)
                 (setq timfel/dslide-develop--horizontal-lines nil)
                 (save-excursion
