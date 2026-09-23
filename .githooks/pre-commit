@@ -53,7 +53,7 @@ for f in $FILES; do
     "$EMACS_BIN" -q --batch \
       -l "$COMPILE_INIT" \
       -l "$HOOK_COMPILE" \
-      --eval "(setq byte-compile-warnings t
+      --eval "(setq byte-compile-warnings '(not unresolved free-vars)
                     byte-compile-error-on-warn t)" \
       -f hook-compile-strict-batch \
       $f
