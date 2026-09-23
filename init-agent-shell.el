@@ -23,11 +23,13 @@
 
 (use-package agent-shell-bwrap
   :after agent-shell-utils
+  :if (not (eq system-type 'windows-nt))
   :config
   (agent-shell-bwrap-mode 1))
 
 (use-package agent-shell-context
   :after agent-shell-utils
+  :if (not (eq system-type 'windows-nt))
   :config
   (agent-shell-context-mode 1))
 
@@ -79,6 +81,7 @@
 
 (use-package agent-shell
   :ensure t
+  :after exec-path-from-shell
   :functions (agent-shell-make-environment-variables
               agent-shell-openai-make-authentication
               agent-shell-make-goose-authentication
@@ -149,7 +152,8 @@
    agent-shell-pi-environment
    (when (eq system-type 'windows-nt)
      (agent-shell-make-environment-variables
-      "PI_ACP_PI_COMMAND" (or (executable-find "pi.exe") "pi.exe")))
+      "PI_ACP_PI_COMMAND" (or (executable-find "pi.exe") "pi.exe")
+      :inherit-env t))
    agent-shell-openai-authentication (agent-shell-openai-make-authentication :login t)
    agent-shell-cline-environment (agent-shell-make-environment-variables :inherit-env t)
    agent-shell-openai-codex-environment (agent-shell-make-environment-variables :inherit-env t)

@@ -334,7 +334,8 @@
             :branch "main"
             :ignored-files ("scripts/*" "test/*"))
   :if (eq system-type 'windows-nt)
-  :defer t)
+  :after exec-path-from-shell
+  :demand t)
 
 (use-package rustic
   :ensure t
