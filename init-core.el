@@ -4,25 +4,14 @@
 (use-package android
   :if (eq system-type 'android)
   :no-require t
-  :defines (timfel/cloud-storage android-intercept-control-space touch-screen-display-keyboard
-            touch-screen-current-tool org-capture-mode-map visual-wrap-extra-indent org-agenda-files
-            org-capture-mode org-agenda-mode org-mode org-agenda-prefix-format
-            org-deadline-warning-days)
-  :functions (org-capture-kill org-capture-finalize org-capture with-auto-default
-              timfel/android-mail-addresses timfel/android-send-it
-              timfel/android-start-termux timfel/android-set-window-margins
-              timfel/android-touch-screen-point-up org-agenda-switch-to
-              global-visual-wrap-prefix-mode org-agenda-redo-all
-              org-fold-show-all
-              touch-screen-handle-point-up context-menu-open
-              mail-fetch-field mail-strip-quoted-names
-              mail-sendmail-undelimit-header expand-mail-aliases)
   :after (timfel)
   :hook
   (after-init . (lambda ()
                   (run-with-idle-timer
                    1 nil
-                   (lambda () (global-text-scale-adjust +8)))))
+                   (lambda ()
+                     (global-text-scale-adjust +8)
+                     (org-agenda nil "a")))))
   :custom
   (browse-url-browser-function #'browse-url-default-android-browser)
   :config
@@ -54,7 +43,7 @@
                            (dolist (f org-agenda-files)
                              (when-let* ((b (find-buffer-visiting f))
                                          (_ (not (buffer-modified-p b))))
-                               (with-current-buffer b 
+                               (with-current-buffer b
                                  (revert-buffer))))
                            (find-file (car (last org-agenda-files)))
                            (org-fold-show-all)
@@ -72,33 +61,27 @@
 
   (add-hook 'org-mode-hook
             (lambda ()
-              (unless (or org-capture-mode (and (boundp 'gptel-mode) gptel-mode))
+              (unless (or (bound-and-true-p org-capture-mode) (bound-and-true-p gptel-mode))
                 (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
                 (define-key-after tool-bar-map [separator-0] menu-bar-separator)
-                (require 'org-agenda)
-                (require 'org-capture)
                 (tool-bar-local-item "mail/spam"
                                      (lambda () (interactive)
-                                       (org-agenda nil "a")
-                                       (delete-other-windows))
+                                       (org-agenda nil "a"))
                                      'agenda
                                      tool-bar-map)
                 (tool-bar-local-item "mail/inbox"
                                      (lambda () (interactive)
-                                       (org-capture nil "t")
-                                       (delete-other-windows))
+                                       (org-capture nil "t"))
                                      'todo
                                      tool-bar-map)
                 (tool-bar-local-item "mail/compose"
                                      (lambda () (interactive)
-                                       (org-capture nil "n")
-                                       (delete-other-windows))
+                                       (org-capture nil "n"))
                                      'note
                                      tool-bar-map)
                 (tool-bar-local-item "mail/reply-all"
                                      (lambda () (interactive)
-                                       (org-capture nil "m")
-                                       (delete-other-windows))
+                                       (org-capture nil "m"))
                                      'meeting
                                      tool-bar-map)
                 (tool-bar-local-item "conceal" 'org-cycle 'cycle
@@ -120,11 +103,11 @@
               (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
               (define-key-after tool-bar-map [separator-0] menu-bar-separator)
               (tool-bar-local-item "symbols/check-mark_16"
-                                   'org-capture-finalize
+                                   #'org-capture-finalize
                                    'org-capture-finalize
                                    tool-bar-map)
               (tool-bar-local-item "symbols/cross_16"
-                     'org-capture-kill
+                     #'org-capture-kill
                      'org-capture-kill
                      tool-bar-map)))
 
@@ -135,20 +118,17 @@
               (tool-bar-local-item "close" 'quit-window 'close tool-bar-map)
               (tool-bar-local-item "mail/inbox"
                                    (lambda () (interactive)
-                                     (org-capture nil "t")
-                                     (delete-other-windows))
+                                     (org-capture nil "t"))
                                    'todo
                                    tool-bar-map)
               (tool-bar-local-item "mail/compose"
                                    (lambda () (interactive)
-                                     (org-capture nil "n")
-                                     (delete-other-windows))
+                                     (org-capture nil "n"))
                                    'note
                                    tool-bar-map)
               (tool-bar-local-item "mail/reply-all"
                                    (lambda () (interactive)
-                                     (org-capture nil "m")
-                                     (delete-other-windows))
+                                     (org-capture nil "m"))
                                    'meeting
                                    tool-bar-map)
               (tool-bar-local-item "refresh"
@@ -162,10 +142,26 @@
                                    'refresh
                                    tool-bar-map)
               (tool-bar-local-item "right-arrow"
-                                   (lambda () (interactive)
-                                     (org-agenda-switch-to t))
+                                   #'org-agenda-switch-to
                                    'goto
                                    tool-bar-map)))
+
+  (setopt display-buffer-alist
+          (cons '("\\*Org Agenda\\*"
+                  display-buffer-same-window)
+                display-buffer-alist))
+  (setopt display-buffer-alist
+          (cons `(,(rx bos "CAPTURE-")
+                  display-buffer-same-window)
+                display-buffer-alist))
+  (setopt display-buffer-alist
+          (cons `(,(rx "notes.org" eos)
+                  display-buffer-same-window)
+                display-buffer-alist))
+  (setopt display-buffer-alist
+          (cons `(,(rx "todo.org" eos)
+                  display-buffer-same-window)
+                display-buffer-alist))
 
   ;; No auto-save and no backup files
   (customize-set-variable 'auto-save-default nil)
@@ -265,7 +261,7 @@
   (advice-add #'touch-screen-handle-point-up
               :around
               (lambda (orig point prefix canceled)
-                (if (and (eq (nth 3 touch-screen-current-tool) 'held)
+                (if (and (eq (nth 3 (bound-and-true-p touch-screen-current-tool)) 'held)
                          (not canceled))
                     (let ((last-input-event (list 'mouse-3 (cdr point))))
                       (context-menu-open))
@@ -310,7 +306,7 @@
 (use-package org
   :after timfel
   :commands org-mode
-  :functions org-agenda-files
+  :defines org-agenda-files
   :mode (("\\.org$" . org-mode))
   :custom-face
   (org-level-1 ((t (:inherit outline-1 :height 1.35))))
@@ -335,7 +331,7 @@
                       (interactive)
                       (org-store-link nil)
                       (when-let* ((link (caar org-stored-links))
-                                  (files (org-agenda-files))
+                                  (files org-agenda-files)
                                   (re (regexp-quote link))
                                   (hit 0))
                         (seq-find (lambda (f)
