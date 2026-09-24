@@ -68,8 +68,7 @@
          model
          (plist-put (symbol-plist model)
                     :request-params
-                    `(:reasoning (:effort ,effort
-                                          :summary "detailed"))))))
+                    `(:reasoning (:effort ,effort))))))
 
     (gptel-make-openai "llama-cpp"
       :host "127.0.0.1:8080"
