@@ -93,7 +93,8 @@
   (org-alert-interval 300)
   (org-alert-notify-cutoff 10)
   :config
-  (org-alert-enable))
+  (when (all (lambda (f) (file-exists-p f)) org-agenda-files)
+    (org-alert-enable)))
 
 (use-package org-modern
   :ensure t
