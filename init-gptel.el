@@ -18,10 +18,7 @@
                :prefix "C-x g"
                :prefix-docstring "GPTel commands"
                ("t" . gptel-org-set-topic)
-               ("f" . gptel-fim)
-               ("c" . gptel-compile)
                ("s" . gptel-send)
-               ("p" . gptel-pi)
                ("b" . gptel-buffers))
   :config
   (require 'gptel-openai)
@@ -112,15 +109,21 @@
 (use-package gptel-pi
   :after gptel
   :demand t
-  :commands (gptel-pi))
+  :commands (gptel-pi)
+  :bind (:map my-gptel-prefix-map
+              ("p" . gptel-pi)))
 
 (use-package gptel-fim
   :after gptel
-  :commands (gptel-fim))
+  :commands (gptel-fim)
+  :bind (:map my-gptel-prefix-map
+              ("f" . gptel-fim)))
 
 (use-package gptel-compile
   :after gptel
-  :commands (gptel-compile))
+  :commands (gptel-compile)
+  :bind (:map my-gptel-prefix-map
+              ("c" . gptel-compile)))
 
 (use-package gptel-modeline-status
   :after gptel
