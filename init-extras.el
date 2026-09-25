@@ -181,12 +181,14 @@
 
 (use-package corfu
   :ensure t
-  :bind (("M-?" . completion-at-point))
+  :bind (("M-/" . completion-at-point))
   :custom
   (corfu-cycle t)
   (corfu-quit-no-match nil)
-  :init
-  (global-corfu-mode))
+  (corfu-popupinfo-delay '(1.25 . 0.5))
+  :config
+  (global-corfu-mode)
+  (corfu-popupinfo-mode 1))
 
 (use-package cape
   :ensure t
@@ -194,6 +196,14 @@
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-keyword)
   (add-hook 'completion-at-point-functions #'cape-file))
+
+(use-package orderless
+  :ensure t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-pcm-leading-wildcard t)
+  :config
+   completion-category-overrides '((file (styles partial-completion))))
 
 (use-package magit
   :unless (memq system-type '(windows-nt android))

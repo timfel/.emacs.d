@@ -533,13 +533,13 @@
                                                             minibuffer-completion-predicate)
                                        'category)))))
   :custom
-  (icomplete-in-buffer t)
+  (icomplete-in-buffer nil) ;; I use corfu instead
   (icomplete-hide-common-prefix t)
   (icomplete-tidy-shadowed-file-names t)
   (icomplete-show-matches-on-no-input t)
   (completion-flex-nospace nil)
-  (icomplete-vertical-in-buffer-adjust-list t) ;; EMACS-31
-  (icomplete-vertical-render-prefix-indicator t) ;; EMACS-31
+  (icomplete-vertical-in-buffer-adjust-list t)
+  (icomplete-vertical-render-prefix-indicator t)
   :config
   (add-to-list 'completion-ignored-extensions
                ".lock")
@@ -548,10 +548,16 @@
         read-file-name-completion-ignore-case t)
   (icomplete-mode t)
   (icomplete-vertical-mode t)
-  ;; If I were to use normal ido-mode, disable icomplete in the minibuffer
+
+  ;;; If I were to use normal ido-mode, disable icomplete in the minibuffer
   ;; (remove-hook 'minibuffer-setup-hook #'icomplete-minibuffer-setup)
-  ;; i like completion to be local
-  (advice-add 'completion-at-point :after (lambda (&rest _args) (unless (minibuffer-window-active-p (get-buffer-window)) (minibuffer-hide-completions))))
+
+  ;;; When icomplete-in-buffer is on, the below advice is good
+  ;; (advice-add 'completion-at-point
+  ;;             :after
+  ;;             (lambda (&rest _args)
+  ;;               (unless (minibuffer-window-active-p (get-buffer-window)) (minibuffer-hide-completions))))
+
   (setq completion-category-overrides nil)
   (mapc (lambda (override) (add-to-list 'completion-category-overrides override))
         '((project-file (styles substring))
