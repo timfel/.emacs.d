@@ -22,10 +22,10 @@
   (tool-bar-mode 1)
   (menu-bar-mode 1)
   (modifier-bar-mode -1) ;; and extra bar with Meta/Ctrl/Super buttons if the android kbd doesn't have them
-  (customize-set-variable 'tool-bar-position 'bottom)
-  (customize-set-variable 'tool-bar-always-show-default nil)
-  (customize-set-variable 'tool-bar-button-margin 48)
-  (customize-set-variable 'touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
+  (setop 'tool-bar-position 'bottom)
+  (setop 'tool-bar-always-show-default nil)
+  (setop 'tool-bar-button-margin 48)
+  (setop 'touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
   (setq-default tool-bar-map (make-sparse-keymap))
   (setq tool-bar-map (default-value 'tool-bar-map))
   (tool-bar-add-item "save" 'save-buffer 'save-buffer)
@@ -164,10 +164,10 @@
                 display-buffer-alist))
 
   ;; No auto-save and no backup files
-  (customize-set-variable 'auto-save-default nil)
-  (customize-set-variable 'auto-save-visited-mode nil)
-  (customize-set-variable 'make-backup-files nil)
-  (customize-set-variable 'recentf-auto-cleanup 300)
+  (setop 'auto-save-default nil)
+  (setop 'auto-save-visited-mode nil)
+  (setop 'make-backup-files nil)
+  (setop 'recentf-auto-cleanup 300)
 
   ;; Set Coding System to plain utf-8
   (if (fboundp 'set-charset-priority)
@@ -217,12 +217,12 @@
     (set-fontset-font t nil font))
 
   ;; never make me type "yes"
-  (customize-set-variable 'use-short-answers t)
+  (setop 'use-short-answers t)
 
   ;; Make text easier to read on a phone.
   (require 'visual-wrap)
-  (customize-set-variable 'line-spacing '(0.1 . 0.1))
-  (customize-set-variable 'visual-wrap-extra-indent 0)
+  (setop 'line-spacing '(0.1 . 0.1))
+  (setop 'visual-wrap-extra-indent 0)
   (modify-all-frames-parameters '((internal-border-width . 32)))
   (run-with-idle-timer
    1 nil
@@ -230,15 +230,15 @@
   (global-visual-line-mode t)
   (global-visual-wrap-prefix-mode 1)
   (global-hide-mode-line-mode 1)
-  (customize-set-variable 'visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
+  (setop 'visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
 
   ;; Make agenda easier to read on phone
-  (customize-set-variable 'org-agenda-prefix-format
+  (setop 'org-agenda-prefix-format
         '((agenda . " %i %?-12t% s\n    ")
           (todo   . " %i")
           (tags   . " %i")
           (search . " %i")))
-  (customize-set-variable 'org-deadline-warning-days 0)
+  (setop 'org-deadline-warning-days 0)
   
   ;; Keyboard setup for the the no-name bluetooth phone keyboard I use. AltGr
   ;; sends KEYCODE_*, and there is no Meta key, so let's make it usable
@@ -250,7 +250,7 @@
   (define-key key-translation-map (kbd "S-<KEYCODE_Q>") (kbd "Ä"))
   (define-key key-translation-map (kbd "S-<KEYCODE_P>") (kbd "Ö"))
   (define-key key-translation-map (kbd "S-<KEYCODE_Y>") (kbd "Ü"))
-  (customize-set-variable 'android-intercept-control-space nil)
+  (setop 'android-intercept-control-space nil)
 
   ;; A long press is also the start of drag selection. If the finger is
   ;; released without moving, turn that same gesture into a context menu. The
@@ -274,6 +274,11 @@
                 "\\|\\`/data/data/org.gnu.emacs/\\'"
                 "\\|\\`/data/data/com.termux/\\'"
                 "\\|\\`/content/storage/\\'"))
+
+  ;; The scratch buffer is not useful on android
+  (setopt initial-buffer-choice (lambda ()
+                                  (require 'org-agenda)
+                                  (org-agenda nil "a")))
 
   :bind
   (:map org-capture-mode-map
