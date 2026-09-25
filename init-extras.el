@@ -166,6 +166,7 @@
      (slide-level . 2))))
 
 (use-package company
+  :disabled
   :ensure t
   :bind (("M-?" . company-complete))
   :config (global-company-mode t)
@@ -177,6 +178,22 @@
   (company-dabbrev-ignore-case 'keep-prefix)
   (company-dabbrev-downcase 0)
   (company-idle-delay (if (eq system-type 'windows-nt) 10 0.2)))
+
+(use-package corfu
+  :ensure t
+  :bind (("M-?" . completion-at-point))
+  :custom
+  (corfu-cycle t)
+  (corfu-quit-no-match nil)
+  :init
+  (global-corfu-mode))
+
+(use-package cape
+  :ensure t
+  :init
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-keyword)
+  (add-hook 'completion-at-point-functions #'cape-file))
 
 (use-package magit
   :unless (memq system-type '(windows-nt android))

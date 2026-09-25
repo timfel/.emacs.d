@@ -100,8 +100,13 @@
   (use-short-answers t)
   (fill-column 79)
   (buffer-file-coding-system 'utf-8-unix)
+  ;; auto install grammar and enable treesitter
   (treesit-auto-install-grammar (and (not (equal system-type 'windows-nt)) 'always))
   (treesit-enabled-modes (not (equal system-type 'windows-nt)))
+  ;; disable Ispell completion function.
+  (text-mode-ispell-word-completion nil)
+  ;; hide commands in M-x that do not apply to the current mode
+  (read-extended-command-predicate #'command-completion-default-include-p)
   :config
   (cond
    ((eq system-type 'windows-nt)
