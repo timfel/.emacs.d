@@ -67,12 +67,12 @@
                     :request-params
                     `(:reasoning (:effort ,effort))))))
 
-    (gptel-make-openai "llama-cpp"
-      :host "127.0.0.1:8080"
-      :protocol "http"
-      :stream t
-      :models '(local-code-model local-chat-model)
-      :key "none"))
+    (setq gptel--strix
+          (gptel-make-openai "llama-cpp"
+            :host "192.168.178.30:8080"
+            :protocol "http"
+            :stream t
+            :key "none")))
 
   ;; Directives
   (setq gptel-directives
@@ -132,3 +132,10 @@
 (use-package timfel-gptel-orchestration
   :commands timfel/weekly-confluence-report
   :bind (("C-x a m" . timfel/gptel-open-agents-orchestration)))
+
+(use-package gptel-model-updater
+  :vc (:url "https://github.com/cat-emacs/gptel-model-updater")
+  :after gptel
+  :custom
+  (gptel-model-updater-backends
+   '(gptel--strix)))
