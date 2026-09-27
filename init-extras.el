@@ -203,7 +203,10 @@
   (completion-styles '(orderless basic))
   (completion-pcm-leading-wildcard t)
   :config
-   completion-category-overrides '((file (styles partial-completion))))
+  (let ((entry (assoc 'file completion-category-overrides)))
+    (if entry
+        (setcdr entry '((styles partial-completion)))
+      (push '(file . ((styles partial-completion))) completion-category-overrides))))
 
 (use-package magit
   :unless (memq system-type '(windows-nt android))
