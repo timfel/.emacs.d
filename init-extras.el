@@ -182,6 +182,7 @@
 (use-package corfu
   :ensure t
   :bind (("M-/" . completion-at-point))
+  :demand t
   :custom
   (corfu-cycle t)
   (corfu-quit-no-match nil)
