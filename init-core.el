@@ -22,10 +22,10 @@
   (tool-bar-mode 1)
   (menu-bar-mode 1)
   (modifier-bar-mode -1) ;; and extra bar with Meta/Ctrl/Super buttons if the android kbd doesn't have them
-  (setop 'tool-bar-position 'bottom)
-  (setop 'tool-bar-always-show-default nil)
-  (setop 'tool-bar-button-margin 48)
-  (setop 'touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
+  (setopt tool-bar-position 'bottom)
+  (setopt tool-bar-always-show-default nil)
+  (setopt tool-bar-button-margin 48)
+  (setopt touch-screen-display-keyboard t) ;; being able to get the keyboard anywhere is good
   (setq-default tool-bar-map (make-sparse-keymap))
   (setq tool-bar-map (default-value 'tool-bar-map))
   (tool-bar-add-item "save" 'save-buffer 'save-buffer)
@@ -164,10 +164,10 @@
                 display-buffer-alist))
 
   ;; No auto-save and no backup files
-  (setop 'auto-save-default nil)
-  (setop 'auto-save-visited-mode nil)
-  (setop 'make-backup-files nil)
-  (setop 'recentf-auto-cleanup 300)
+  (setopt auto-save-default nil)
+  (setopt auto-save-visited-mode nil)
+  (setopt make-backup-files nil)
+  (setopt recentf-auto-cleanup 300)
 
   ;; Set Coding System to plain utf-8
   (if (fboundp 'set-charset-priority)
@@ -217,12 +217,12 @@
     (set-fontset-font t nil font))
 
   ;; never make me type "yes"
-  (setop 'use-short-answers t)
+  (setopt use-short-answers t)
 
   ;; Make text easier to read on a phone.
   (require 'visual-wrap)
-  (setop 'line-spacing '(0.1 . 0.1))
-  (setop 'visual-wrap-extra-indent 0)
+  (setopt line-spacing '(0.1 . 0.1))
+  (setopt visual-wrap-extra-indent 0)
   (modify-all-frames-parameters '((internal-border-width . 32)))
   (run-with-idle-timer
    1 nil
@@ -230,15 +230,15 @@
   (global-visual-line-mode t)
   (global-visual-wrap-prefix-mode 1)
   (global-hide-mode-line-mode 1)
-  (setop 'visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
+  (setopt visual-line-fringe-indicators '(left-curly-arrow right-curly-arrow))
 
   ;; Make agenda easier to read on phone
-  (setop 'org-agenda-prefix-format
+  (setopt org-agenda-prefix-format
         '((agenda . " %i %?-12t% s\n    ")
           (todo   . " %i")
           (tags   . " %i")
           (search . " %i")))
-  (setop 'org-deadline-warning-days 0)
+  (setopt org-deadline-warning-days 0)
   
   ;; Keyboard setup for the the no-name bluetooth phone keyboard I use. AltGr
   ;; sends KEYCODE_*, and there is no Meta key, so let's make it usable
@@ -250,7 +250,7 @@
   (define-key key-translation-map (kbd "S-<KEYCODE_Q>") (kbd "Ä"))
   (define-key key-translation-map (kbd "S-<KEYCODE_P>") (kbd "Ö"))
   (define-key key-translation-map (kbd "S-<KEYCODE_Y>") (kbd "Ü"))
-  (setop 'android-intercept-control-space nil)
+  (setopt android-intercept-control-space nil)
 
   ;; A long press is also the start of drag selection. If the finger is
   ;; released without moving, turn that same gesture into a context menu. The
