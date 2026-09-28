@@ -42,3 +42,6 @@ lisp/ci-dashboard/
 /org-social-mentions
 /v-social.org
 /.mc-lists.el
+*.eld
+/tree-sitter/
+/session.10dfd8cad2000179053241600000264230001
