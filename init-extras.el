@@ -215,6 +215,7 @@
          :map magit-mode-map
          ("C-x a s" . timfel-agent-start))
   :ensure t
+  :hook ((git-commit-mode . (lambda () (set-fill-column 72))))
   :preface
   (setq magit-diff-specify-hunk-foreground nil)
   :custom
