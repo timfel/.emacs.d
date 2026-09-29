@@ -63,13 +63,11 @@
 
 (use-package robe
   :ensure t
-  :hook ((ruby-mode . robe-mode)
-         (ruby-ts-mode . robe-mode)))
+  :hook ((ruby-base-mode . robe-mode)))
 
 (use-package rspec-mode
   :ensure t
-  :hook ((ruby-mode . rspec-mode)
-         (ruby-ts-mode . rspec-mode)))
+  :hook ((ruby-base-mode . rspec-mode)))
 
 (use-package inf-ruby
   :ensure t
@@ -418,7 +416,18 @@
 (use-package dape
   :ensure t
   :commands dape
+  :custom-face
+  (dape-source-line-face ((t (:inherit highlight))))
+  :hook
+  ((ruby-base-mode . abbrev-mode)
+   (dape-info-parent-mode . (lambda ()
+                              (face-remap-add-relative 'header-line :height 0.8)
+                              (face-remap-add-relative 'default :height 0.8))))
   :config
+  (define-abbrev ruby-base-mode-abbrev-table
+    "ddd"
+    "require 'debug'; binding.break;")
+  ;; Snippets from https://github.com/svaante/dape/wiki
   ;; put require "debug"; binding.break for the starting point in a test block,
   ;; then run M-x dape and select rdbg-rails-test
   (cl-flet* ((merge-plists (&rest plists)

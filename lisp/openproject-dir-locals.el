@@ -36,12 +36,7 @@
     (rspec-spec-command . "bin/compose rspec %s")
     (rspec-use-rake-when-possible . nil))
 
-   (ruby-ts-mode
-    (eval
-     . (progn
-         (local-set-key (kbd "C-c C-r") #'openproject-rails-console)
-         (local-set-key (kbd "C-c C-t") #'openproject-rspec-current))))
-   (ruby-mode
+   (ruby-base-mode
     (eval
      . (progn
          (local-set-key (kbd "C-c C-r") #'openproject-rails-console)

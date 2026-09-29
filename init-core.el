@@ -942,8 +942,6 @@
   (eglot-extend-to-xref t)
   (eglot-send-changes-idle-time 2)
   :config
-  (add-to-list 'eglot-server-programs
-               '((ruby-mode ruby-ts-mode) "ruby-lsp"))
   (advice-add
    'eglot-workspace-folders :filter-return
    (lambda (folders)
