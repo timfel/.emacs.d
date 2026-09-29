@@ -421,7 +421,9 @@
   :hook
   ((ruby-base-mode . abbrev-mode)
    (dape-info-parent-mode . (lambda ()
-                              (face-remap-add-relative 'header-line :height 0.8)
+                              (face-remap-add-relative 'header-line-active :height 0.8)
+                              (face-remap-add-relative 'header-line-highlight :height 0.8)
+                              (face-remap-add-relative 'header-line-inactive :height 0.8)
                               (face-remap-add-relative 'default :height 0.8))))
   :config
   (define-abbrev ruby-base-mode-abbrev-table
