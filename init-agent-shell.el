@@ -115,7 +115,7 @@
   :custom
   (agent-shell-inhibit-system-sleep nil)
   (agent-shell-thought-process-expand-by-default t)
-  (agent-shell-activity-group-expand-by-default t)
+  (agent-shell-activity-group-expand-by-default 'latest)
   (agent-shell-busy-indicator-frames 'dots-round)
   (agent-shell-header-style 'text)
   (agent-shell-buffer-name-format (lambda (_agent-name project-name) (format "%s agent" project-name)))

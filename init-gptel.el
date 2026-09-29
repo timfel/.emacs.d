@@ -69,7 +69,7 @@
 
     (setq gptel--strix
           (gptel-make-openai "llama-cpp"
-            :host "192.168.178.30:8080"
+            :host "strixhalo:8080"
             :protocol "http"
             :stream t
             :key "none")))
