@@ -280,6 +280,15 @@
                                   (require 'org-agenda)
                                   (org-agenda nil "a")))
 
+  ;; now enable tab-bar-mode and open another tab with a gptel buffer (not
+  ;; selected)
+  (tab-bar-mode 1)
+  (tab-bar-new-tab)
+  (switch-to-buffer (gptel "*gptel*"))
+  (tab-bar-new-tab)
+  (vc-dir user-emacs-directory)
+  (tab-bar-select-tab 1)
+
   :bind
   (:map org-capture-mode-map
         ("<volume-down>" . #'org-capture-finalize)
