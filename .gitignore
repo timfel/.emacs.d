@@ -45,3 +45,6 @@ lisp/ci-dashboard/
 *.eld
 /tree-sitter/
 /session.10dfd8cad2000179053241600000264230001
+*.rej
+/network-security.data
+/newsticker/
