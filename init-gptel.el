@@ -29,6 +29,21 @@
   (setf (alist-get 'org-mode gptel-prompt-prefix-alist) "@user\n")
   (setf (alist-get 'org-mode gptel-response-prefix-alist) "@llm\n")
 
+  ;; Keep headings generated in an LLM response from changing org outline
+  (defun timfel/gptel-protect-org-headings (beg end)
+    (when (derived-mode-p 'org-mode)
+      (save-excursion
+        (let ((end-marker (copy-marker end)))
+          (goto-char beg)
+          (while (re-search-forward "^\\*+\\(?:[[:space:]]+\\|$\\)"
+                                    end-marker t)
+            (goto-char (match-beginning 0))
+            (unless (org-in-src-block-p)
+              (insert " "))
+            (goto-char (match-end 0)))
+          (set-marker end-marker nil)))))
+  (add-hook 'gptel-post-response-functions #'my-gptel-protect-org-headings)
+
   (add-hook 'gptel-mode-hook
             (lambda ()
               (setq-local tool-bar-map (copy-tree (default-value 'tool-bar-map)))
