@@ -21,11 +21,11 @@
             :rev :newest
             :ignored-files ("tests/*")))
 
-(use-package agent-shell-bwrap
+(use-package agent-shell-nono
   :after agent-shell-utils
-  :if (not (eq system-type 'windows-nt))
+  :if (memq system-type '(gnu/linux darwin))
   :config
-  (agent-shell-bwrap-mode 1))
+  (agent-shell-nono-mode 1))
 
 (use-package agent-shell-context
   :after agent-shell-utils

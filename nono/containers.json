@@ -1,0 +1,18 @@
+{
+  "extends": "developer",
+  "meta": {
+    "name": "containers",
+    "description": "TRUSTED AGENTS ONLY: Docker/Podman daemon access bypasses this sandbox's filesystem, network and resource limits. Rootful Docker can control the host as root."
+  },
+  "filesystem": {
+    "bypass_protection": ["$HOME/.docker"],
+    "read": ["$HOME/.docker", "$HOME/.config/containers"],
+    "unix_socket": [
+      { "path": "/var/run/docker.sock", "when": "linux" },
+      { "path": "$XDG_RUNTIME_DIR/docker.sock", "when": "linux" },
+      { "path": "$XDG_RUNTIME_DIR/podman/podman.sock", "when": "linux" },
+      "$HOME/.docker/run/docker.sock",
+      "$HOME/.docker/desktop/docker.sock"
+    ]
+  }
+}

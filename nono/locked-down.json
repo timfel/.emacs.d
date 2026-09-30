@@ -1,0 +1,39 @@
+{
+  "extends": "base",
+  "meta": {
+    "name": "locked-down",
+    "description": "Offline workspace editing with Linux /tmp scratch space. No sibling repositories, Git common-directory grants, container sockets or remote model APIs."
+  },
+  "workdir": { "access": "readwrite" },
+  "security": {
+    "capability_elevation": false,
+    "wsl2_proxy_policy": "error"
+  },
+  "linux": { "af_unix_mediation": "pathname" },
+  "network": { "block": true },
+  "groups": {
+    "exclude": ["system_write_linux", "system_write_macos"]
+  },
+  "filesystem": {
+    "allow": [
+      { "path": "/tmp", "when": "linux" }
+    ],
+    "read": [
+      "$HOME/.local/share/mise/installs",
+      "$HOME/.nvm"
+    ],
+    "write": [
+      "/dev/pts",
+      "/dev/fd",
+      { "path": "/proc/self/fd", "when": "linux" }
+    ],
+    "write_file": [
+      "/dev/null",
+      "/dev/zero",
+      "/dev/full",
+      "/dev/tty",
+      "/dev/stdout",
+      "/dev/stderr"
+    ]
+  }
+}

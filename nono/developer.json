@@ -1,0 +1,73 @@
+{
+  "extends": "base",
+  "meta": {
+    "name": "developer",
+    "description": "Developer network preset with build caches, agent state and Graal repository access."
+  },
+  "workdir": { "access": "readwrite" },
+  "security": {
+    "capability_elevation": false,
+    "wsl2_proxy_policy": "error"
+  },
+  "network": { "network_profile": "developer" },
+  "filesystem": {
+    "allow": [
+      "$HOME/.cache",
+      "$HOME/.cline",
+      "$HOME/.codex",
+      "$HOME/.config/goose",
+      "$HOME/.config/opencode",
+      "$HOME/.local/share/goose",
+      "$HOME/.local/state/goose",
+      "$HOME/.local/share/opencode",
+      "$HOME/.eclipse",
+      "$HOME/.gradle",
+      "$HOME/.hermes",
+      "$HOME/.m2",
+      "$HOME/.mx",
+      "$HOME/.npm",
+      "$HOME/.opencode",
+      "$HOME/.pi",
+      "$HOME/dev/.metadata",
+      "$HOME/dev/ci-overlays/.git",
+      "$HOME/dev/graal/.git",
+      "$HOME/dev/graal-enterprise/.git",
+      "$HOME/dev/graalpython/.git",
+      "$HOME/dev/eclipse",
+      "$HOME/dev/mx",
+      "$WORKDIR/../graal",
+      "$WORKDIR/../graalos",
+      "$WORKDIR/../graalos-image-builder",
+      "$WORKDIR/../graal-enterprise",
+      "$WORKDIR/../ci-overlays",
+      "$WORKDIR/../mx"
+    ],
+    "read": [
+      "$HOME/.agents",
+      "$HOME/.bun",
+      "$HOME/.bundle",
+      "$HOME/.cargo",
+      "$HOME/.config/git",
+      "$HOME/.config/mise",
+      "$HOME/.local/bin",
+      "$HOME/.local/lib",
+      "$HOME/.local/share/mise",
+      "$HOME/.nvm",
+      "$HOME/.ol",
+      "$HOME/.pyenv",
+      "$HOME/.rustup",
+      "$HOME/.sdkman",
+      "$HOME/dev"
+    ],
+    "read_file": [
+      "$HOME/.gitconfig",
+      "$HOME/.gitignore"
+    ],
+    "deny": [
+      "$HOME/.config/mc",
+      "$HOME/.config/onedrive",
+      "$HOME/.config/pulse",
+      "$HOME/.config/rclone"
+    ]
+  }
+}

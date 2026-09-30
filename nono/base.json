@@ -1,0 +1,7 @@
+{
+  "extends": "default",
+  "meta": {
+    "name": "base",
+    "description": "Unchanged nono default policy. Network access is unrestricted unless another profile restricts it."
+  }
+}
