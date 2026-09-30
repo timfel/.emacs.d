@@ -127,6 +127,9 @@
   (agent-shell-show-usage-at-turn-end t)
   (agent-shell-text-file-capabilities t)
   :config
+  ;; i tend to walk through and reply to multiple things
+  (advice-add #'agent-shell-quote-region :before
+              (lambda (&rest _) (point-to-register ?.)))
   (fset 'timfel-agent-start #'agent-shell)
   (keymap-unset agent-shell-mode-map "p")
   (keymap-unset agent-shell-mode-map "n")
