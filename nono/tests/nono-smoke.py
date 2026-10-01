@@ -15,7 +15,7 @@ import tempfile
 import threading
 
 CHILD = r'''
-import errno, http.client, os, socket, subprocess, sys, urllib.parse
+import errno, os, socket, subprocess, sys, tempfile
 from pathlib import Path
 mode, port = sys.argv[1], int(sys.argv[2])
 home = Path.home()
@@ -30,28 +30,46 @@ def denied(action):
 
 denied(lambda: (home / ".emacs.d/nono/developer.json").read_text())
 denied(lambda: (home / "private.txt").read_text())
+denied(lambda: (home / ".ssh/id_ed25519").read_text())
 denied(lambda: (home / "outside-workspace.txt").write_text("bad"))
 Path("workspace-output.txt").write_text("allowed")
-denied(lambda: socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
+if sys.platform.startswith("linux"):
+    with tempfile.TemporaryDirectory(prefix="nono-scratch-", dir="/tmp") as temp:
+        scratch = Path(temp) / "roundtrip.txt"
+        scratch.write_text("allowed")
+        assert scratch.read_text() == "allowed"
 
 sock = str(Path(os.environ["XDG_RUNTIME_DIR"]) / "docker.sock")
 if mode == "locked-down":
+    denied(lambda: socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
     denied(lambda: socket.socket(socket.AF_INET, socket.SOCK_STREAM))
     denied(lambda: socket.socket(socket.AF_INET6, socket.SOCK_STREAM))
     denied(lambda: Path("../mx/sibling.txt").write_text("bad"))
+    denied(lambda: (home / ".ol/cache/response.json").write_text("bad"))
+    denied(lambda: (home / ".config/gh/config.yml").read_text())
+    for repo in ("graal", "graalpython", "graal-enterprise"):
+        denied(lambda: (home / "dev" / repo / "main-output.txt").write_text("bad"))
     denied(lambda: socket.socket(socket.AF_UNIX).connect(sock))
     git = subprocess.run(["/usr/bin/git", "status", "--porcelain"], capture_output=True)
     assert git.returncode != 0, "locked-down unexpectedly accessed external Git metadata"
 else:
-    denied(lambda: socket.create_connection(("127.0.0.1", port), timeout=3))
-    denied(lambda: socket.socket(socket.AF_INET6).connect(("::1", port)))
-    proxy = urllib.parse.urlsplit(os.environ.get("http_proxy") or os.environ["HTTP_PROXY"])
-    import base64
-    auth = base64.b64encode((proxy.username + ":" + proxy.password).encode()).decode()
-    connection = http.client.HTTPConnection(proxy.hostname, proxy.port, timeout=5)
-    connection.request("GET", "http://example.invalid/", headers={"Proxy-Authorization": "Basic " + auth})
-    assert connection.getresponse().status == 403, "unlisted destination not blocked"
-    connection.close()
+    assert "NONO_PROXY_TOKEN" not in os.environ, "unexpected nono network proxy"
+    with socket.create_connection(("127.0.0.1", port), timeout=3):
+        pass
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+        client.sendto(b"native UDP allowed", ("127.0.0.1", port))
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+    if socket.has_ipv6:
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM):
+            pass
+    (home / ".ol/cache/response.json").write_text("allowed")
+    assert (home / ".ol/cache/response.json").read_text() == "allowed"
+    assert (home / ".config/gh/config.yml").read_text() == "github config"
+    denied(lambda: (home / ".config/gh/config.yml").write_text("bad"))
+    for repo in ("graal", "graalpython", "graal-enterprise"):
+        (home / "dev" / repo / "main-output.txt").write_text("allowed")
     Path("../mx/sibling.txt").write_text("allowed")
     Path("tracked.txt").write_text("changed")
     git = subprocess.run(["/usr/bin/git", "add", "tracked.txt"], capture_output=True)
@@ -74,13 +92,25 @@ print(sys.stdin.read(), end="")
 
 def main():
     nono, profile_directory = sys.argv[1:]
-    with tempfile.TemporaryDirectory(prefix="nono-profile-smoke-") as temp:
+    # /tmp is readable in every Linux profile: putting HOME there would
+    # accidentally grant all fake host files and invalidate denial checks.
+    test_parent = Path(profile_directory).resolve().parent
+    if sys.platform.startswith("linux") and test_parent.is_relative_to(Path("/tmp").resolve()):
+        raise SystemExit("Keep profiles and the smoke-test fixture outside /tmp")
+    with tempfile.TemporaryDirectory(prefix="nono-profile-smoke-", dir=test_parent) as temp:
         root = Path(temp)
         home = root / "home"
         profiles = home / ".emacs.d/nono"
         profiles.parent.mkdir(parents=True)
         shutil.copytree(profile_directory, profiles)
         (home / "private.txt").write_text("host-only")
+        (home / ".ssh").mkdir()
+        (home / ".ssh/id_ed25519").write_text("fake private key")
+        (home / ".ol/cache").mkdir(parents=True)
+        (home / ".config/gh").mkdir(parents=True)
+        (home / ".config/gh/config.yml").write_text("github config")
+        for name in ("graalpython", "graal-enterprise"):
+            (home / "dev" / name).mkdir(parents=True)
         runtime = home / "run"
         runtime.mkdir()
         env = os.environ.copy()

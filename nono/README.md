@@ -44,16 +44,30 @@ networking** and does not automatically grant workspace writes.
 
 ### `developer.json` (initial selection)
 
-Extends `base`, enables workspace read/write access, and selects the
-upstream **`developer` network preset**. This includes model APIs, package
-registries, GitHub, Sigstore and documentation destinations. It is broad,
-but not unrestricted native networking: network clients must use nono's
-proxy or a suitable adapter. The preset can change with nono releases.
+Extends `base`, enables workspace read/write access, and allows **fully
+unrestricted native networking**, including TCP, UDP, DNS, SSH and listening
+sockets. `network.network_profile: null` explicitly clears any inherited
+network preset; there is no domain allowlist or nono network proxy.
+`network.network_profile: "developer"` would select the default nono profile,
+and an additional `network.allow_domain` array with wildcards,
+`network.upstream_proxy`, and `network.upstream_bypass` could be used for
+proxies and additional domains. Without any of that, clients retain the host's
+ordinary proxy environment and configuration. This also applies to
+`containers.json`, which inherits `developer`.
 
 Filesystem grants cover repositories, build caches and agent state,
-including shared Git metadata and six sibling repository paths. Missing
-optional profile paths are skipped by nono; create them outside the
-sandbox before launching if you need them granted.
+including the full `~/dev/graalpython`, `~/dev/graal` and
+`~/dev/graal-enterprise` checkouts, shared Git metadata and six sibling
+repository paths. The main checkouts are writable regardless of the agent's
+launch directory; this is not worktree-exclusive isolation. Missing optional
+profile paths are skipped by nono; create them outside the sandbox before
+launching if you need them granted.
+
+`~/.ol` is read/write so gdev-cli can cache responses, update configuration
+and authentication, and update itself. This also allows the agent to replace
+the host's gdev-cli executable and modify its saved credentials; use this
+profile only for trusted agents. `~/.config/gh` is read-only so the configured
+GitHub credential helper can use existing GitHub CLI authentication.
 
 On Linux, Landlock cannot subtract a deny from an allowed parent. Nono
 refuses conflicting configurations rather than ignoring the deny. The
@@ -62,8 +76,8 @@ profile therefore uses specific grants:
 - `~/.local/bin`, `~/.local/lib`, `~/.local/share/mise` and per-agent
   data/state directories. The whole `~/.local` directory would expose
   nono's protected runtime state and keyrings.
-- Agent configuration directories, `.config/git`, `.config/mise`,
-  `.gitconfig` and `.gitignore`. Broad `~/.config`, `~/.emacs.d` and
+- Agent configuration directories, `.config/gh`, `.config/git`, `.config/mise`,
+  `/etc/gitconfig`, `.gitconfig` and `.gitignore`. Broad `~/.config`, `~/.emacs.d` and
   `~/dotfiles` reads are not granted. Add specific paths as needed,
   including targets of individually symlinked files.
 - `~/.ssh`, `~/.docker` and `~/.npmrc` are protected by nono's default
@@ -72,13 +86,14 @@ profile therefore uses specific grants:
 - `.config/mc`, `.config/onedrive`, `.config/pulse` and `.config/rclone`
   are explicitly denied.
 
-The preset includes upstream temporary-directory grants. The Linux
-launcher supplies a private `/tmp` when bubblewrap is available; other
-granted temporary directories remain host-backed. There is no private
-home mount.
+The profile explicitly grants Linux `/tmp` read/write access, so scripts
+can create and reread temporary files. The Linux launcher supplies a private
+`/tmp` when bubblewrap is available; without bubblewrap, this grant also
+exposes host `/tmp`. Other upstream temporary-directory grants remain
+host-backed. There is no private home mount.
 
 It also retains nono's default Unix IPC policy. In particular, on Linux,
-**a domain allowlist does not imply host Unix sockets are inaccessible**.
+**filesystem restrictions do not imply host Unix sockets are inaccessible**.
 A reachable Docker, Podman, D-Bus or other powerful socket can provide an
 escape from the effective filesystem/network restrictions. Use strict
 pathname mediation on a supported native Linux system if that boundary
@@ -167,14 +182,17 @@ For a fanout layout such as:
 ~/dev/graalpython/.agent-shell/worktrees/graal/
 ```
 
-It does **not** mean `~/dev/graal`. If you want the latter checkout writable
-regardless of where the agent starts, add `"$HOME/dev/graal"` explicitly.
-There is no implicit search for related repositories.
+It does **not** mean `~/dev/graal`. The developer profile separately grants
+`"$HOME/dev/graal"`, `"$HOME/dev/graal-enterprise"` and
+`"$HOME/dev/graalpython"` explicitly, so those main checkouts remain writable
+regardless of where the agent starts. There is no implicit search for related
+repositories.
 
 A Git worktree's `.git` file usually points outside the worktree to the
 main checkout's shared metadata. Workspace access alone is therefore not
 enough for operations such as `git add` or `git commit`. The developer
-profile grants writes to these shared metadata directories:
+profile grants writes to these shared metadata directories (the three Graal
+`.git` directories are covered by their full-checkout grants):
 
 ```text
 $HOME/dev/ci-overlays/.git

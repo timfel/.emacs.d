@@ -2,14 +2,16 @@
   "extends": "base",
   "meta": {
     "name": "developer",
-    "description": "Developer network preset with build caches, agent state and Graal repository access."
+    "description": "Unrestricted networking with build caches, agent state and Graal repository access. with network_profile: 'developer' it would use the default nono dev restrictions"
   },
   "workdir": { "access": "readwrite" },
   "security": {
     "capability_elevation": false,
     "wsl2_proxy_policy": "error"
   },
-  "network": { "network_profile": "developer" },
+  "network": {
+    "network_profile": null
+  },
   "filesystem": {
     "allow": [
       "$HOME/.cache",
@@ -26,13 +28,14 @@
       "$HOME/.m2",
       "$HOME/.mx",
       "$HOME/.npm",
+      "$HOME/.ol",
       "$HOME/.opencode",
       "$HOME/.pi",
       "$HOME/dev/.metadata",
       "$HOME/dev/ci-overlays/.git",
-      "$HOME/dev/graal/.git",
-      "$HOME/dev/graal-enterprise/.git",
-      "$HOME/dev/graalpython/.git",
+      "$HOME/dev/graal",
+      "$HOME/dev/graal-enterprise",
+      "$HOME/dev/graalpython",
       "$HOME/dev/eclipse",
       "$HOME/dev/mx",
       "$WORKDIR/../graal",
@@ -40,26 +43,28 @@
       "$WORKDIR/../graalos-image-builder",
       "$WORKDIR/../graal-enterprise",
       "$WORKDIR/../ci-overlays",
-      "$WORKDIR/../mx"
+      "$WORKDIR/../mx",
+      { "path": "/tmp", "when": "linux" }
     ],
     "read": [
       "$HOME/.agents",
       "$HOME/.bun",
       "$HOME/.bundle",
       "$HOME/.cargo",
+      "$HOME/.config/gh",
       "$HOME/.config/git",
       "$HOME/.config/mise",
       "$HOME/.local/bin",
       "$HOME/.local/lib",
       "$HOME/.local/share/mise",
       "$HOME/.nvm",
-      "$HOME/.ol",
       "$HOME/.pyenv",
       "$HOME/.rustup",
       "$HOME/.sdkman",
       "$HOME/dev"
     ],
     "read_file": [
+      "/etc/gitconfig",
       "$HOME/.gitconfig",
       "$HOME/.gitignore"
     ],
