@@ -2,7 +2,7 @@
   "extends": "base",
   "meta": {
     "name": "developer",
-    "description": "Unrestricted networking with build caches, agent state and Graal repository access. with network_profile: 'developer' it would use the default nono dev restrictions"
+    "description": "Unrestricted networking with build caches, agent state, Graal repository access and host SSH-agent authentication on Linux."
   },
   "workdir": { "access": "readwrite" },
   "security": {
@@ -74,5 +74,20 @@
       "$HOME/.config/pulse",
       "$HOME/.config/rclone"
     ]
+  },
+  "platform_overrides": {
+    "linux": {
+      "filesystem": {
+        "bypass_protection": ["$HOME/.ssh/known_hosts"],
+        "read_file": ["$HOME/.ssh/known_hosts"],
+        "unix_socket": ["$XDG_RUNTIME_DIR/agent-shell-ssh/agent.sock"]
+      },
+      "environment": {
+        "set_vars": {
+          "SSH_AUTH_SOCK": "$XDG_RUNTIME_DIR/agent-shell-ssh/agent.sock",
+          "GIT_SSH_COMMAND": "/usr/bin/ssh -F /dev/null -o IdentityFile=none -o BatchMode=yes -o StrictHostKeyChecking=yes -o ForwardAgent=no -o UpdateHostKeys=no"
+        }
+      }
+    }
   }
 }

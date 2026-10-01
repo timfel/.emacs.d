@@ -17,9 +17,11 @@ of the policy. Changes to JSON are read on the next process launch.
 When `bwrap` is available, `agent-shell-nono` gives every sandboxed local
 Linux launch a fresh tmpfs `/tmp` with mode `1777`, and sets `TMPDIR`, `TMP`
 and `TEMP` to `/tmp`. Bubblewrap runs before nono so filesystem permissions
-apply to the new mount. Host `/tmp` contents are hidden; temporary data
-vanishes when the session's processes exit. When available, the outer
-systemd scope also accounts for the tmpfs memory usage.
+apply to the new mount. Host `/tmp` contents are hidden except for an explicitly
+selected workspace there: only that directory is bound back read/write, making
+`agent-shell-new-temp-shell` usable. Workspace files persist on the host;
+private scratch data vanishes when the session's processes exit. When available,
+the outer systemd scope also accounts for the tmpfs memory usage.
 
 Bubblewrap is optional, like `systemd-run`. **Without it, `/tmp` remains
 host-backed, and the same profile grant allows access to the host's
@@ -28,10 +30,12 @@ The launcher reports when bubblewrap is missing, but nono's filesystem
 and network policy still applies. Temporary-directory environment variables
 are left unchanged when there is no mount wrapper.
 
-With bubblewrap, keep the nono executable, selected profile and workspace
-outside `/tmp`, including symlink targets, so the mount does not hide them.
-The home directory and `/var/tmp` are not replaced. Other platforms are
-unchanged. Profiles only specify permissions; the launcher creates mounts.
+With bubblewrap, keep the nono executable and selected profile outside `/tmp`,
+including symlink targets, so the mount does not hide them. A selected workspace
+under `/tmp` is restored at its selected and canonical paths; host parents and
+siblings remain hidden. Selecting `/tmp` itself, even through a symlink, is
+rejected. The home directory and `/var/tmp` are not replaced. Other platforms
+are unchanged. Profiles only specify permissions; the launcher creates mounts.
 
 ## Profiles
 
@@ -81,8 +85,9 @@ profile therefore uses specific grants:
   `~/dotfiles` reads are not granted. Add specific paths as needed,
   including targets of individually symlinked files.
 - `~/.ssh`, `~/.docker` and `~/.npmrc` are protected by nono's default
-  credential policy. The trusted container profile makes an exception
-  for Docker.
+  credential policy. On Linux, only `~/.ssh/known_hosts` is readable for
+  SSH host verification; private keys and SSH config remain blocked.
+  The trusted container profile makes an exception for Docker.
 - `.config/mc`, `.config/onedrive`, `.config/pulse` and `.config/rclone`
   are explicitly denied.
 
@@ -98,6 +103,75 @@ A reachable Docker, Podman, D-Bus or other powerful socket can provide an
 escape from the effective filesystem/network restrictions. Use strict
 pathname mediation on a supported native Linux system if that boundary
 is required; do not assume this general developer profile provides it.
+
+#### SSH-agent authentication (Linux)
+
+`developer.json` and its `containers.json` child assume a host SSH agent at
+`$XDG_RUNTIME_DIR/agent-shell-ssh/agent.sock`. The Elisp launcher starts it
+on demand before launching either profile, reuses it across sessions, and
+loads `agent-shell-nono-ssh-agent-keys` when the agent is empty (initially
+`~/.ssh/id_ed25519`). **No SSH systemd service or destination file is needed.**
+The process belongs to Emacs and normally exits with it. A launch failure
+never falls back to exposing private-key files or running unsandboxed.
+
+`agent-shell-nono-ssh-agent-profiles` names the profiles needing this startup
+step; add custom derived profiles explicitly. Other platforms, remote
+launches, unsandboxed launches and base/locked-down profiles do not start an
+SSH agent. Running nono directly does not start one either.
+
+The only SSH filesystem grant is read access to `~/.ssh/known_hosts`, plus
+the socket. Private keys and `~/.ssh/config` remain blocked. The profile sets
+`SSH_AUTH_SOCK` inside the sandbox without changing Emacs's environment.
+The socket is outside the private `/tmp` and its directory must be owned by
+the current user with mode 0700. Dead, user-owned sockets are removed only
+when the connection is refused, allowing retries after an abrupt shutdown.
+Symlinks, other file types and other agent failures are reported and left
+untouched; inspect those on the host before removing them. Failed startups
+also clean up their dead sockets.
+
+The agent is **generic and not destination-constrained**. It can authenticate
+to any SSH server accepting a loaded key, including Git hosting and ordinary
+SSH servers. This grants the key's authentication/signing authority, not just
+read-only or repository-specific access. The inherited Unix-socket caveat
+still applies: a different profile is not a security boundary against another
+local process reaching this socket. Key contents remain inside the host agent.
+
+`GIT_SSH_COMMAND` selects `/usr/bin/ssh` with no user config or identity-file
+loading, no prompts or agent forwarding, strict host-key verification and
+no automatic host-key updates. Git remotes must specify the correct host,
+user and port; aliases from `~/.ssh/config` are not available. Host keys must
+already be verified in `known_hosts` outside the sandbox. Git remotes are
+not rewritten, and nono does not translate SSH to HTTPS. Keep real server
+names and URLs out of files under `nono/`.
+
+Startup refuses passphrase prompts. For encrypted keys, unlock on the host
+using the managed socket, then retry the launch:
+
+```sh
+SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/agent-shell-ssh/agent.sock" ssh-add ~/.ssh/id_ed25519
+```
+
+Set `agent-shell-nono-ssh-agent-keys` to nil to leave loading entirely manual.
+An already-populated agent is reused without reloading keys or changing their
+constraints. To remove its identities, use `ssh-add -D` with that socket;
+a later launch will reload configured keys if it is empty.
+
+No separate profile selection is needed. Restart existing agent processes
+to pick up policy changes; a running sandbox cannot be reconfigured. After a
+host-key rotation, verify and update `known_hosts` on the host, then restart
+the agent session so nono sees the updated file. A read-only check is:
+
+```sh
+git -C /path/to/repository ls-remote origin
+```
+
+Run the isolated regression test (temporary HOME, disposable keys, real
+SSH agent, private `/tmp`, no network requests):
+
+```sh
+python3 ~/.emacs.d/nono/tests/ssh-agent-smoke.py \
+  "$(mise where nono)/nono" ~/.emacs.d/nono
+```
 
 ### `locked-down.json`
 
