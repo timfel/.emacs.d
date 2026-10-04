@@ -48,3 +48,4 @@ lisp/ci-dashboard/
 *.rej
 /network-security.data
 /newsticker/
+/session.*
