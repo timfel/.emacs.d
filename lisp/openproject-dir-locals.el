@@ -42,9 +42,24 @@
          (local-set-key (kbd "C-c C-r") #'openproject-rails-console)
          (local-set-key (kbd "C-c C-t") #'openproject-rspec-current))))))
 
+(setopt safe-local-variable-values
+        ;; concat to existing safe-local-variable-values
+        (seq-uniq (append safe-local-variable-values
+                          '((rspec-use-rake-when-possible)
+                            (rspec-use-bundler)
+                            (ruby-shell-interpreter-args . "compose exec -T backend bundle exec ruby")
+                            (ruby-shell-interpreter . "docker") (ruby-indent-level . 2)
+                            (inf-ruby-wrapper-command . "docker compose exec -T backend %s")
+                            (rspec-command . "bin/compose rspec")
+                            (rspec-spec-command . "bin/compose rspec %s")))))
+
 ;; Change this to your actual checkout.
 (dir-locals-set-directory-class
  (expand-file-name "~/dev/openproject/")
+ 'openproject-docker)
+
+(dir-locals-set-directory-class
+ (expand-file-name "~/opf/")
  'openproject-docker)
 
 (provide 'openproject-dir-locals)
