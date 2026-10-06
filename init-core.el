@@ -294,7 +294,13 @@
   :bind
   (:map org-capture-mode-map
         ("<volume-down>" . #'org-capture-finalize)
-        ("<volume-up>" . #'org-capture-kill)))
+        ("<volume-up>" . #'org-capture-kill)
+        (:map org-mode-map
+              ("RET" . (lambda (arg)
+                         (interactive "P")
+                         (if (org-in-item-p)
+                             (org-meta-return arg)
+                           (org-return arg))))))
 
 (use-package zone
   :commands (zone-when-idle)
