@@ -42,7 +42,7 @@
               (insert " "))
             (goto-char (match-end 0)))
           (set-marker end-marker nil)))))
-  (add-hook 'gptel-post-response-functions #'my-gptel-protect-org-headings)
+  (add-hook 'gptel-post-response-functions #'timfel/gptel-protect-org-headings)
 
   (add-hook 'gptel-mode-hook
             (lambda ()
