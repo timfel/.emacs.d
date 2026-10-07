@@ -4,6 +4,12 @@
 
 (defvar inf-ruby-console-environment)
 
+(defcustom openproject-dev-setup
+  nil
+  "Selects docker-based (t) or bare-metal setup (nil)"
+  :type '(radio (const :tag "Docker using bin/compose" t)
+                (const :tag "Bare metal setup" nil)))
+
 (defun openproject-rails-console ()
   (interactive)
   (let ((inf-ruby-console-environment "development"))
@@ -16,24 +22,26 @@
     (unless root
       (user-error "Could not find the OpenProject project root"))
     (compile
-     (format
-      "docker compose exec -T backend-test bundle exec rspec %s"
-      (shell-quote-argument
-       (file-relative-name file root))))))
+     (concat
+      (if openproject-dev-setup "compose exec -T backend-test " "")
+      (format
+       "bundle exec rspec %s"
+       (shell-quote-argument
+        (file-relative-name file root)))))))
 
 (dir-locals-set-class-variables
  'openproject-docker
- '((nil
-    (compile-command . "bin/compose rspec ")
+ `((nil
+    (compile-command . ,(if openproject-dev-setup "bin/compose rspec " "rspec "))
     (ruby-indent-level . 2)
-    (ruby-shell-interpreter . "docker")
+    (ruby-shell-interpreter . ,(if openproject-dev-setup "docker" "ruby"))
     (ruby-shell-interpreter-args
-     . "compose exec -T backend bundle exec ruby")
+     . ,(if openproject-dev-setup "compose exec -T backend bundle exec ruby" ""))
     (inf-ruby-wrapper-command
-     . "docker compose exec -T backend %s")
+     . ,(if openproject-dev-setup "docker compose exec -T backend %s" nil))
     (rspec-use-bundler . nil)
-    (rspec-command . "bin/compose rspec")
-    (rspec-spec-command . "bin/compose rspec %s")
+    (rspec-command . ,(if openproject-dev-setup "bin/compose rspec" "bundle exec rspec"))
+    (rspec-spec-command . ,(if openproject-dev-setup "bin/compose rspec %s" "bundle exec rspec %s"))
     (rspec-use-rake-when-possible . nil))
 
    (ruby-base-mode
@@ -48,10 +56,16 @@
                           '((rspec-use-rake-when-possible)
                             (rspec-use-bundler)
                             (ruby-shell-interpreter-args . "compose exec -T backend bundle exec ruby")
-                            (ruby-shell-interpreter . "docker") (ruby-indent-level . 2)
+                            (ruby-shell-interpreter-args . "")
+                            (ruby-shell-interpreter . "docker")
+                            (ruby-shell-interpreter . "ruby")
+                            (ruby-indent-level . 2)
                             (inf-ruby-wrapper-command . "docker compose exec -T backend %s")
+                            (inf-ruby-wrapper-command . nil)
                             (rspec-command . "bin/compose rspec")
-                            (rspec-spec-command . "bin/compose rspec %s")))))
+                            (rspec-command . "bundle exec rspec")
+                            (rspec-spec-command . "bin/compose rspec %s")
+                            (rspec-spec-command . "bundle exec rspec %s")))))
 
 ;; Change this to your actual checkout.
 (dir-locals-set-directory-class
