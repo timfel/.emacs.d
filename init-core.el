@@ -291,8 +291,7 @@
               (vc-dir user-emacs-directory)
               (tab-bar-select-tab 1)))
 
-  :bind
-  (:map org-capture-mode-map
+  :bind (:map org-capture-mode-map
         ("<volume-down>" . #'org-capture-finalize)
         ("<volume-up>" . #'org-capture-kill)
         (:map org-mode-map
@@ -300,7 +299,7 @@
                          (interactive "P")
                          (if (org-in-item-p)
                              (org-meta-return arg)
-                           (org-return arg))))))
+                           (org-return arg)))))))
 
 (use-package zone
   :commands (zone-when-idle)
