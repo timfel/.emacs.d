@@ -103,8 +103,10 @@
   :custom
   (org-modern-hide-stars 'leading)
   (org-modern-star 'replace)
-  (org-modern-replace-stars "●◉○◌◦⠂⠐") ;; best compromise across the platforms i use
-  ;; "●◉◍○◌∙◦⠂⠐" ;; works best with DejaVu Sans Mono, but not Android or SourceCodePro
+  (org-modern-replace-stars
+   (cond ((eq system-type 'gnu/linux) "●◉◍○◦⠂⠐")
+         ;; best compromise for remaining systems, e.g. Windows and Android
+         (t "●◉○◌◦⠂⠐")))
   ;; "●⚉◉○◌⚬◦·"
   ;; "●◉○⚇⚆◌⚬"
   ;; "❱▶▷►▻▸▹"
