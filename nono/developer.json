@@ -67,6 +67,10 @@
       "/etc/gitconfig",
       "$HOME/.gitconfig",
       "$HOME/.gitignore"
+      "$HOME/.bash_profile"
+      "$HOME/.bashrc"
+      "$HOME/dotfiles/.bash_profile"
+      "$HOME/dotfiles/.bashrc"
     ],
     "deny": [
       "$HOME/.config/mc",
