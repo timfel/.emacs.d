@@ -316,7 +316,11 @@
 
 (use-package typescript-mode
   :mode "\\.ts\\'"
-  :ensure t)
+  :ensure t
+  :config
+  (with-eval-after-load 'eglot
+    (add-to-list 'eglot-server-programs
+                 '((typescript-ts-base-mode) "typescript-language-server" "--stdio"))))
 
 (use-package exec-path-from-shell
   :ensure t

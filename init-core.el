@@ -630,7 +630,8 @@
   :preface
   (defcustom project-markers-filenames
     '("Cargo.toml" "compile_commands.json" "compile_flags.txt"
-      "pyproject.toml" ".venv" "setup.py" "pyrightconfig.json")
+      "pyproject.toml" ".venv" "setup.py" "pyrightconfig.json"
+      "tsconfig.json")
     "Files or directories that indicate the root of a project."
     :type '(repeat string)
     :group 'project)
