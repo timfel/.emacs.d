@@ -113,6 +113,7 @@
 (use-package gptel-annotate
   :vc (:url "https://github.com/karthink/gptel-annotate"
             :rev :newest)
+  :demand t
   :bind ("C-x g a" . gptel-annotate)
   :after gptel)
 
@@ -154,3 +155,10 @@
   :custom
   (gptel-model-updater-backends
    '(gptel--strix)))
+
+(use-package gptel-inline
+  :after gptel
+  :demand t
+  :commands (gptel-inline)
+  :bind ("C-x g i" . gptel-inline)
+  :ensure t)
