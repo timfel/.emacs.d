@@ -1,46 +1,18 @@
 ;;; -*- lexical-binding: t -*-
 (require 'use-package)
 
-(use-package org-caldav
-  :disabled
-  :ensure t
+(use-package org-from-ical
   :after org
-  :if (eq system-type 'gnu/linux)
   :config
-  (setopt org-caldav-calendars
-          '((:calendar-id "timfelgentreff%40gmail.com"
-             :files nil
-             :inbox "~/.emacs.d/.cache/google.org")))
-  (setopt org-caldav-inbox "~/.emacs.d/.cache/google.org")
-  (setopt org-caldav-files nil)
-  (setopt org-icalendar-timezone "Europe/Berlin")
-  (setopt org-caldav-sync-direction 'cal->org)
-  (setopt org-caldav-save-buffers nil)
-
-  (advice-add 'org-caldav-sync-calendar :around
-              (lambda (oldfun &optional calendar &rest r)
-                (let ((url nil))
-                  (when calendar
-                    (setq url (plist-get calendar :url))
-                  (unless url
-                    (setq url org-caldav-url))
-                  (if (not (string-match (rx "/calendar.google.com/" (* nonl) "/basic.ics" eos) url nil t))
-                      (apply oldfun calendar r)
-                    ;; google read-only ics sharing, just download
-                    (unless (eq (or (plist-get calendar :sync-direction) org-caldav-sync-direction) 'cal->org)
-                      (error "Google's basic ICS sharing can only sync down"))
-                    (unless (or (null (plist-get calendar :inbox))
-                                (equal (plist-get calendar :inbox) org-caldav-inbox))
-                      (error "Google's basic ICS import must go to the main org-caldav-inbox"))
-                    (with-temp-buffer
-                      (url-retrieve url (lambda (status)
-                                          (org-caldav-import-ics-buffer-to-org)))))))))
-
-  (dolist ((cal org-caldav-calendars))
-    (let ((inbox (or (plist-get cal :inbox) org-caldav-inbox)))
-      (unless (file-exists-p inbox)
-        (make-empty-file inbox))
-      (add-to-list 'org-agenda-files org-caldav-inbox))))
+  (when (executable-find "ical2orgpy")
+    (dolist (file (mapcar #'cdr org-from-ical-alist))
+      (setq file (expand-file-name file))
+      (unless (file-exists-p file)
+        (make-empty-file file))
+      (add-to-list 'org-agenda-files file))
+    (require 'timeout)
+    (timeout-throttle #'org-from-ical (* 5 60))
+    (add-hook 'org-agenda-finalize-hook #'org-from-ical)))
 
 (use-package org-alert
   :disabled
