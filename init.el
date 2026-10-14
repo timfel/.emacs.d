@@ -151,6 +151,8 @@
 ;; (load (locate-user-emacs-file "./init-agent-tui.el")))
 ;; packages that make things prettier, but not really more functional
 (load (locate-user-emacs-file "./init-eyecandy.el"))
+;; org mode
+(load (locate-user-emacs-file "./init-org.el"))
 ;; packages that make emacs more usable in the terminal
 (load (locate-user-emacs-file "./init-terminal.el"))
 ;; extra packages for programming and working
