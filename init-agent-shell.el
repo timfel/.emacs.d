@@ -71,12 +71,13 @@
 
 (use-package agent-shell-desktop
   :vc (:url "https://github.com/timfel/agent-shell-desktop.el" :branch "main" :rev :newest)
-  :after (agent-shell)
+  :config
+  (require 'agent-shell)
   :hook
   (agent-shell-mode . (lambda ()
                         (when (and desktop-save-mode desktop-dirname desktop-file-modtime)
                           ;; this is so we wait roughly until we have a session id to save
-                          (run-with-idle-timer 5 nil #'desktop-save desktop-dirname nil t))))
+                          (run-with-idle-timer 10 nil #'desktop-save desktop-dirname nil t))))
   (desktop-save-mode . agent-shell-desktop-mode))
 
 (use-package agent-shell
@@ -117,6 +118,7 @@
   (agent-shell-show-config-icons nil)
   (agent-shell-show-usage-at-turn-end t)
   (agent-shell-text-file-capabilities t)
+  (agent-shell-show-cost-indicator t)
   :config
   ;; i tend to walk through and reply to multiple things
   (advice-add #'agent-shell-quote-region :before
