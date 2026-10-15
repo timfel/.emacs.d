@@ -54,23 +54,54 @@
       "$HOME/.config/gh",
       "$HOME/.config/git",
       "$HOME/.config/mise",
+      "$HOME/.config/mise/locks",
       "$HOME/.local/bin",
       "$HOME/.local/lib",
       "$HOME/.local/share/mise",
+      "$HOME/.local/share/uv",
       "$HOME/.nvm",
       "$HOME/.pyenv",
       "$HOME/.rustup",
       "$HOME/.sdkman",
-      "$HOME/dev"
+      "$HOME/bin",
+      "$HOME/dev",
+      "$HOME/dotfiles/bin"
     ],
     "read_file": [
       "/etc/gitconfig",
       "$HOME/.gitconfig",
-      "$HOME/.gitignore"
-      "$HOME/.bash_profile"
-      "$HOME/.bashrc"
-      "$HOME/dotfiles/.bash_profile"
-      "$HOME/dotfiles/.bashrc"
+      "$HOME/.gitignore",
+      "$HOME/.bash_profile",
+      "$HOME/.bashrc",
+      "$HOME/dotfiles/.bash_profile",
+      "$HOME/dotfiles/.bashrc",
+      "$HOME/.config/mise/config.toml",
+      "$HOME/.config/mise/mise.lock",
+      "$HOME/.cline/data/globalState.json",
+      "$HOME/.cline/data/settings/cline_mcp_settings.json",
+      "$HOME/.codex/config.toml",
+      "$HOME/.config/goose/adversary.md",
+      "$HOME/.config/goose/config.yaml",
+      "$HOME/.config/goose/permission.yaml",
+      "$HOME/.config/opencode/opencode.jsonc",
+      "$HOME/.hermes/SOUL.md",
+      "$HOME/.hermes/config.yaml",
+      "$HOME/.m2/settings.xml",
+      "$HOME/.mavenrc",
+      "$HOME/.gdbinit",
+      "$HOME/.gdb/graalpy.py",
+      "$HOME/.gemrc",
+      "$HOME/.hgrc",
+      "$HOME/.irbrc",
+      "$HOME/.mambarc",
+      "$HOME/.pdbrc",
+      "$HOME/.screenrc",
+      "$HOME/.tmux.conf",
+      "$HOME/.tmux.bashrc",
+      "$HOME/.topazini",
+      "$HOME/.vimrc",
+      "$HOME/.config/bottom/bottom.toml",
+      "$HOME/.config/llama.cpp/models.ini"
     ],
     "deny": [
       "$HOME/.config/mc",
@@ -82,7 +113,11 @@
   "platform_overrides": {
     "linux": {
       "filesystem": {
-        "bypass_protection": ["$HOME/.ssh/known_hosts"],
+        "bypass_protection": [
+          "$HOME/.ssh/known_hosts",
+          "$HOME/.bashrc",
+          "$HOME/.bash_profile"
+        ],
         "read_file": ["$HOME/.ssh/known_hosts"],
         "unix_socket": ["$XDG_RUNTIME_DIR/agent-shell-ssh/agent.sock"]
       },
