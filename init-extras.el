@@ -234,48 +234,70 @@
 (use-package mmm-mode
   :ensure t
   :demand t
-  :after (java-ts-mode typescript-ts-mode js)
+  :after (java-ts-mode typescript-ts-mode js bash-ts-mode)
   :functions (mmm-add-mode-ext-class)
   :commands (mmm-parse-buffer)
-  :config (progn
-            (require 'mmm-auto)
-            (setq mmm-global-mode 'maybe)
-            (defun polyglot-mode-match (front)
-              (if (string-match "\"\\([[:word:]]+\\)\",[[:space:]]*\n?[[:space:]]*\"\"\"" front)
-                  (let ((sym (intern-soft (concat (downcase (match-string-no-properties 1 front)) "-mode"))))
-                    (if (fboundp sym) sym 'text-mode))
-                (if (string-match "//[[:space:]]*language=\\([[:word:]]+\\)[[:space:]]*\n.+\"\"\"" front)
-                    (let ((sym (intern-soft (concat (downcase (match-string-no-properties 1 front)) "-mode"))))
-                      (if (fboundp sym) sym 'text-mode))
-                'text-mode)))
-            (mmm-add-classes
-             '((java-text-block
-                :match-submode polyglot-mode-match
-                :front ".+\n.+\"\"\"$"
-                :back ".*\"\"\".*"
-                :face mmm-code-submode-face)))
-            (mmm-add-classes
-             '((md-javascript-block
-                :submode javascript-mode
-                :front "<script>"
-                :back "</script>"
-                :face mmm-code-submode-face)))
-            (defun github-code-match (front)
-              (if (string-match "```\\([[:word:]]+\\)" front)
-                  (let ((sym (intern-soft (concat (downcase (match-string-no-properties 1 front)) "-mode"))))
-                    (if (fboundp sym) sym 'fundamental-mode))
-                'fundamental-mode))
-            (mmm-add-classes
-             '((md-github-code-block
-                :match-submode github-code-match
-                :front "```[a-z]+"
-                :back "```"
-                :face mmm-code-submode-face)))
-            (mmm-add-mode-ext-class 'java-mode "\\.java$" 'java-text-block)
-            (mmm-add-mode-ext-class 'java-ts-mode "\\.java$" 'java-text-block)
-            (mmm-add-mode-ext-class 'markdown-mode "\\.md$" 'md-javascript-block)
-            (mmm-add-mode-ext-class 'markdown-ts-mode "\\.md$" 'md-javascript-block)
-            (mmm-add-mode-ext-class 'markdown-mode "\\.md$" 'md-github-code-block)))
+  :config
+  (require 'mmm-auto)
+  (setq mmm-global-mode 'maybe)
+
+  (custom-set-faces
+   '(mmm-default-submode-face
+     ((((background light)) (:background "gray95"))
+      (((background dark)) (:background "gray15")))))
+
+  (defun polyglot-mode-match (front)
+    (if (string-match "\"\\([[:word:]]+\\)\",[[:space:]]*\n?[[:space:]]*\"\"\"" front)
+        (let ((sym (intern-soft (concat (downcase (match-string-no-properties 1 front)) "-mode"))))
+          (if (fboundp sym) sym 'text-mode))
+      (if (string-match "//[[:space:]]*language=\\([[:word:]]+\\)[[:space:]]*\n.+\"\"\"" front)
+          (let ((sym (intern-soft (concat (downcase (match-string-no-properties 1 front)) "-mode"))))
+            (if (fboundp sym) sym 'text-mode))
+        'text-mode)))
+  (mmm-add-classes
+   '((java-text-block
+      :match-submode polyglot-mode-match
+      :front ".+\n.+\"\"\"$"
+      :back ".*\"\"\".*"
+      :face mmm-code-submode-face)))
+  (mmm-add-classes
+   '((md-javascript-block
+      :submode javascript-mode
+      :front "<script>"
+      :back "</script>"
+      :face mmm-code-submode-face)))
+  (defconst shell-heredoc-front-regexp
+    "cat[[:space:]]+<<\\(?:EOF\\|'EOF'\\)[[:space:]]*>\\{1,2\\}[[:space:]]+\\([^[:space:]\n]+\\)")
+  (defun shell-heredoc-match (front)
+    (if (string-match shell-heredoc-front-regexp front)
+        (let ((mode (assoc-default (match-string-no-properties 1 front)
+                                   auto-mode-alist 'string-match)))
+          (if (and mode (fboundp mode)) mode 'text-mode))
+      'text-mode))
+  (mmm-add-classes
+   `((sh-heredoc-block
+      :match-submode shell-heredoc-match
+      :front ,shell-heredoc-front-regexp
+      :back "^EOF[[:space:]]*$"
+      :face mmm-code-submode-face)))
+  (mmm-add-mode-ext-class 'sh-mode "\\.sh$" 'sh-heredoc-block)
+  (mmm-add-mode-ext-class 'bash-ts-mode "\\.sh$" 'sh-heredoc-block)
+  (defun github-code-match (front)
+    (if (string-match "```\\([[:word:]]+\\)" front)
+        (let ((sym (intern-soft (concat (downcase (match-string-no-properties 1 front)) "-mode"))))
+          (if (fboundp sym) sym 'fundamental-mode))
+      'fundamental-mode))
+  (mmm-add-classes
+   '((md-github-code-block
+      :match-submode github-code-match
+      :front "```[a-z]+"
+      :back "```"
+      :face mmm-code-submode-face)))
+  (mmm-add-mode-ext-class 'java-mode "\\.java$" 'java-text-block)
+  (mmm-add-mode-ext-class 'java-ts-mode "\\.java$" 'java-text-block)
+  (mmm-add-mode-ext-class 'markdown-mode "\\.md$" 'md-javascript-block)
+  (mmm-add-mode-ext-class 'markdown-ts-mode "\\.md$" 'md-javascript-block)
+  (mmm-add-mode-ext-class 'markdown-mode "\\.md$" 'md-github-code-block))
 
 (use-package tramp-rpc
   :disabled
