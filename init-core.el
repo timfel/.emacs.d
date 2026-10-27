@@ -1041,8 +1041,38 @@
   :custom
   (speedbar-window-default-width 25)
   (speedbar-window-max-width 40)
+  (speedbar-prefer-window t)
   :bind
-  (("<f6>" . #'speedbar-window)))
+  (("<f6>" . #'speedbar-window))
+  :config
+  (defun timfel-speedbar-files-line-directory (&optional depth)
+    "Return the directory associated with a Speedbar file/tag line.
+Support the bracketed file indicators emitted by Emacs 31 Speedbar."
+    (save-excursion
+      (save-match-data
+        (unless depth
+          (beginning-of-line)
+          (looking-at "^\\([0-9]+\\):")
+          (setq depth (string-to-number (match-string 1))))
+        (let ((directory nil))
+          (setq depth (1- depth))
+          (while (/= depth -1)
+            (unless (re-search-backward (format "^%d:" depth) nil t)
+              (error "Error building filename of tag"))
+            (cond
+             ((looking-at "[0-9]+:\\s-*<->\\s-+")
+              (setq directory (concat (speedbar-line-text) "/" directory)))
+             ((looking-at "[0-9]+:\\s-*\\(?:[-+?]\\|\\[[-+?]\\]\\)\\s-+")
+              (setq directory (speedbar-line-text))))
+            (setq depth (1- depth)))
+          (when (and directory
+                     (string-match (concat speedbar-indicator-regex "$")
+                                   directory))
+            (setq directory (substring directory 0 (match-beginning 0))))
+          (concat default-directory directory)))))
+  (speedbar-add-mode-functions-list
+   '("files"
+     (speedbar-line-directory . timfel-speedbar-files-line-directory))))
 
 (use-package ibuffer
   :defer t
@@ -1075,3 +1105,20 @@
     "c"   #'customize-apropos
     "i"   #'info-apropos)
   (keymap-set help-map "a" help-apropos-map))
+
+(use-package outline
+  :ensure nil
+  :hook
+  (outline-minor-mode . (lambda ()
+                          (when outline-minor-mode
+                            (setq-local imenu-generic-expression
+                                        (append
+                                         (assoc-delete-all
+                                          "Outline" imenu-generic-expression)
+                                         '(("Outline" "^;;;\\(;*\\)[ \\t]*\\(.*\\)$" 2))))
+                            (setq-local imenu--index-alist nil)))))
+
+(use-package windmove
+  :ensure nil
+  :custom
+  (windmove-allow-all-windows t))
