@@ -234,8 +234,10 @@
 (use-package mmm-mode
   :ensure t
   :demand t
-  :after (java-ts-mode typescript-ts-mode js bash-ts-mode)
-  :functions (mmm-add-mode-ext-class)
+  :hook ((java-ts-mode . mmm-mode)
+         (typescript-ts-mode . mmm-mode)
+         (js-mode . mmm-mode)
+         (sh-base-mode . mmm-mode))
   :commands (mmm-parse-buffer)
   :config
   (require 'mmm-auto)

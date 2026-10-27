@@ -9,7 +9,7 @@
   :commands (gptel)
   :pin melpa
   :custom
-  (gptel-model 'gpt-5.6-luna)
+  (gptel-model 'gpt-6-luna)
   (gptel-default-mode 'org-mode)
   (gptel-log-level 'info)
   (gptel-org-branching-context t)
@@ -70,10 +70,10 @@
     (setq gptel-backend
           (gptel-make-openai-oauth "OpenAI" :models gptel--openai-models))
     (dolist (model-effort
-             '((gpt-5.6-terra . "high")
-               (gpt-5.6-luna  . "high")
-               (gpt-5.6-sol   . "high")
-               (gpt-5.6-astra . "high")))
+             '((gpt-6-terra . "high")
+               (gpt-6-luna  . "high")
+               (gpt-6.1-sol . "high")
+               (gpt-6-astra . "high")))
       (let ((model (car model-effort))
             (effort (cdr model-effort)))
         (setplist
