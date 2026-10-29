@@ -1032,7 +1032,11 @@ DIRECTION is either `head' or `tail'.  MAX-BYTES and MAX-LINES default to
      ((not (file-readable-p expanded-path))
       (format "Error: file is not readable: %s" expanded-path))
      ((file-directory-p expanded-path)
-      (format "Error: path is a directory: %s" expanded-path))
+      (string-join
+       (append
+        '("DIRECTORY LISTING:" "" "")
+        (directory-files expanded-path t))
+       "\n  "))
      (t
       (with-temp-buffer
         (insert-file-contents expanded-path)
