@@ -439,6 +439,7 @@
              (string-suffix-p "cmdproxy.exe" ghostel-shell))
     (setq ghostel-shell (list ghostel-shell "/C" "powershell")))
   :custom
+  (ghostel-readonly-fast-exit nil)
   (ghostel-max-scrollback (* 50 1024 1024)))
 
 (use-package dape
