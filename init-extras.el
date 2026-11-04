@@ -269,17 +269,48 @@
       :back "</script>"
       :face mmm-code-submode-face)))
   (defconst shell-heredoc-front-regexp
-    "cat[[:space:]]+<<\\(?:EOF\\|'EOF'\\)[[:space:]]*>\\{1,2\\}[[:space:]]+\\([^[:space:]\n]+\\)")
+    "[[:space:]]+<<\\(?:EOF\\|'EOF'\\)\\(?:[[:space:]]*>\\{1,2\\}[[:space:]]+\\([^[:space:]\n]+\\)\\)?")
+  (defconst shell-heredoc-shebang-regexp
+    "[\r\n]+[ \t]*#![ \t]*\\(?:[^ \t\r\n]*/env[ \t]+\\)?\\([^ \t\r\n]+\\)"
+    "Match a shebang on the first line, also handling `#!/usr/bin/env INTERP'.")
+
+  (defun shell-heredoc-interpreter-mode (interp)
+    "Match `INTERP-ts-mode', then `INTERP-mode', fall back to `text-mode'."
+    (let* ((base (file-name-nondirectory interp))
+           (ts-mode (intern (format "%s-ts-mode" base)))
+           (plain-mode (intern (format "%s-mode" base))))
+      (cond
+       ((fboundp ts-mode) ts-mode)
+       ((fboundp plain-mode) plain-mode)
+       (t 'text-mode))))
+
   (defun shell-heredoc-match (front)
-    (if (string-match shell-heredoc-front-regexp front)
-        (let ((mode (assoc-default (match-string-no-properties 1 front)
-                                   auto-mode-alist 'string-match)))
-          (if (and mode (fboundp mode)) mode 'text-mode))
-      'text-mode))
+    "Pick a submode for a heredoc from FRONT (the delimiter text only).
+Note that mmm only passes the text matched by the front regexp, so
+the heredoc body (and its shebang) is NOT part of FRONT.  mmm's
+front-search match data is still live here, so grab the buffer
+position of the front match end before our own `string-match' calls
+clobber it, and sniff the first lines of the heredoc body."
+    (let ((front-end (match-end 0)))       ; buffer position, from mmm's search
+      (if (not (string-match shell-heredoc-front-regexp front))
+          'text-mode
+        (let ((file (match-string-no-properties 1 front)))
+          (if file
+              (let ((mode (assoc-default file auto-mode-alist 'string-match)))
+                (if (and mode (fboundp mode)) mode 'text-mode))
+            (let ((head (when (integer-or-marker-p front-end)
+                          (buffer-substring-no-properties
+                           front-end
+                           (min (point-max) (+ front-end 512))))))
+              (if (and head (string-match shell-heredoc-shebang-regexp head))
+                  (shell-heredoc-interpreter-mode
+                   (match-string-no-properties 1 head))
+                'text-mode)))))))
   (mmm-add-classes
    `((sh-heredoc-block
       :match-submode shell-heredoc-match
       :front ,shell-heredoc-front-regexp
+      :front-offset (end-of-line 1)
       :back "^EOF[[:space:]]*$"
       :face mmm-code-submode-face)))
   (mmm-add-mode-ext-class 'sh-mode "\\.sh$" 'sh-heredoc-block)
